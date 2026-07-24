@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 class InspectorSnapshot:
     ant_count: int
     food_source_count: int
+    remaining_food_portions: int
     water_source_count: int
     building_material_source_count: int
     nest_food_reserve: int
@@ -39,6 +40,10 @@ class InspectorSnapshot:
             return cls(
                 ant_count=len(world.ants),
                 food_source_count=len(world.food),
+                remaining_food_portions=sum(
+                    food.quantity
+                    for food in world.food
+                ),
                 water_source_count=len(world.water),
                 building_material_source_count=(
                     len(world.building_materials)
@@ -62,6 +67,10 @@ class InspectorSnapshot:
         return cls(
             ant_count=len(world.ants),
             food_source_count=len(world.food),
+            remaining_food_portions=sum(
+                food.quantity
+                for food in world.food
+            ),
             water_source_count=len(world.water),
             building_material_source_count=(
                 len(world.building_materials)

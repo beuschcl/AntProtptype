@@ -1,6 +1,7 @@
 from ant_colony.components import (
     AntState,
     ResourcePortion,
+    ResourceType,
 )
 from ant_colony.config import settings
 from ant_colony.entities.ant import Ant
@@ -197,7 +198,8 @@ def test_ant_can_select_nest_when_carrying_food() -> None:
     ant.inventory.add(
         ResourcePortion(
             source_id=1,
-            nutrition=5,
+            resource_type=ResourceType.FOOD,
+            value=5,
         )
     )
 
@@ -229,7 +231,8 @@ def test_ant_moves_toward_nest() -> None:
     ant.inventory.add(
         ResourcePortion(
             source_id=1,
-            nutrition=5,
+            resource_type=ResourceType.FOOD,
+            value=5,
         )
     )
     ant.select_nest_target(nest)
@@ -250,7 +253,8 @@ def test_ant_deposits_inventory_into_nest() -> None:
     ant.inventory.add(
         ResourcePortion(
             source_id=1,
-            nutrition=5,
+            resource_type=ResourceType.FOOD,
+            value=5,
         )
     )
     ant.select_nest_target(nest)
@@ -273,7 +277,8 @@ def test_ant_cannot_deposit_when_too_far_from_nest() -> None:
 
     portion = ResourcePortion(
         source_id=1,
-        nutrition=5,
+        resource_type=ResourceType.FOOD,
+        value=5,
     )
     ant.inventory.add(portion)
     ant.select_nest_target(nest)

@@ -30,6 +30,10 @@ def test_water_configuration() -> None:
 
     assert water.resource_type is ResourceType.WATER
     assert water.hydration == 4
+    portion = water.collect()
+
+    assert portion is not None
+    assert portion.resource_type is ResourceType.WATER
 
 
 def test_building_material_configuration() -> None:
@@ -46,3 +50,10 @@ def test_building_material_configuration() -> None:
         is ResourceType.BUILDING_MATERIAL
     )
     assert material.construction_value == 3
+    portion = material.collect()
+
+    assert portion is not None
+    assert (
+        portion.resource_type
+        is ResourceType.BUILDING_MATERIAL
+    )

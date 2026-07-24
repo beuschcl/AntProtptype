@@ -1,4 +1,9 @@
-from ant_colony.components import ResourcePortion
+import pytest
+
+from ant_colony.components import (
+    ResourcePortion,
+    ResourceType,
+)
 from ant_colony.entities.nest import Nest
 
 
@@ -16,11 +21,13 @@ def test_nest_deposits_food_portions() -> None:
         (
             ResourcePortion(
                 source_id=1,
-                nutrition=5,
+                resource_type=ResourceType.FOOD,
+                value=5,
             ),
             ResourcePortion(
                 source_id=2,
-                nutrition=3,
+                resource_type=ResourceType.FOOD,
+                value=3,
             ),
         )
     )
@@ -37,7 +44,8 @@ def test_nest_accumulates_multiple_deposits() -> None:
         (
             ResourcePortion(
                 source_id=1,
-                nutrition=5,
+                resource_type=ResourceType.FOOD,
+                value=5,
             ),
         )
     )
@@ -45,7 +53,8 @@ def test_nest_accumulates_multiple_deposits() -> None:
         (
             ResourcePortion(
                 source_id=2,
-                nutrition=3,
+                resource_type=ResourceType.FOOD,
+                value=3,
             ),
         )
     )
@@ -62,3 +71,21 @@ def test_empty_deposit_does_not_change_reserve() -> None:
     assert deposited_nutrition == 0
     assert nest.food_reserve == 0
     assert nest.delivered_portions == 0
+
+
+def test_nest_rejects_non_food_portions() -> None:
+    nest = Nest(x=100, y=100)
+
+    with pytest.raises(
+        ValueError,
+        match="only accepts food portions",
+    ):
+        nest.deposit(
+            (
+                ResourcePortion(
+                    source_id=1,
+                    resource_type=ResourceType.WATER,
+                    value=5,
+                ),
+            )
+        )

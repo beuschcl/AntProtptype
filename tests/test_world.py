@@ -3,6 +3,7 @@ import pytest
 from ant_colony.components import (
     AntState,
     ResourcePortion,
+    ResourceType,
 )
 from ant_colony.config import settings
 from ant_colony.entities.ant import Ant
@@ -41,9 +42,11 @@ def test_entities_contains_every_world_entity() -> None:
     world = World()
 
     expected_count = (
-        settings.STARTING_ANTS
-        + len(world.food)
+        len(world.ants)
         + 1
+        + len(world.food)
+        + len(world.water)
+        + len(world.building_materials)
     )
 
     assert len(world.entities) == expected_count
@@ -351,7 +354,8 @@ def test_world_assigns_nest_to_carrying_ant() -> None:
     ant.inventory.add(
         ResourcePortion(
             source_id=1,
-            nutrition=5,
+            resource_type=ResourceType.FOOD,
+            value=5,
         )
     )
     ant.state = AntState.CARRYING_FOOD
@@ -372,7 +376,8 @@ def test_world_deposits_food_at_nest() -> None:
     ant.inventory.add(
         ResourcePortion(
             source_id=1,
-            nutrition=5,
+            resource_type=ResourceType.FOOD,
+            value=5,
         )
     )
     ant.select_nest_target(nest)
@@ -392,7 +397,8 @@ def test_world_does_not_replace_existing_nest_target() -> None:
     ant.inventory.add(
         ResourcePortion(
             source_id=1,
-            nutrition=5,
+            resource_type=ResourceType.FOOD,
+            value=5,
         )
     )
     ant.select_nest_target(nest)
@@ -425,7 +431,8 @@ def test_world_deposits_pheromone_for_carrying_ant() -> None:
     ant.inventory.add(
         ResourcePortion(
             source_id=1,
-            nutrition=5,
+            resource_type=ResourceType.FOOD,
+            value=5,
         )
     )
     ant.select_nest_target(world.nest)
@@ -462,7 +469,8 @@ def test_world_respects_pheromone_deposit_interval() -> None:
     ant.inventory.add(
         ResourcePortion(
             source_id=1,
-            nutrition=5,
+            resource_type=ResourceType.FOOD,
+            value=5,
         )
     )
     ant.select_nest_target(world.nest)

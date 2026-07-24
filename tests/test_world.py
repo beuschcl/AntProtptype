@@ -1,14 +1,11 @@
 import pytest
 
+from ant_colony.components import AntState
 from ant_colony.config import settings
 from ant_colony.entities.ant import Ant
-from ant_colony.entities.entity import Entity
 from ant_colony.entities.food import Food
-from ant_colony.entities.nest import Nest
+from ant_colony.knowledge import EntityObservation
 from ant_colony.world import World
-from ant_colony.knowledge import (
-    EntityObservation,
-)
 
 def test_world_creates_configured_number_of_ants() -> None:
     world = World()
@@ -236,3 +233,101 @@ def test_world_rejects_sensing_for_unregistered_ant() -> None:
         match="not registered",
     ):
         world.sense_for(unknown_ant)
+
+def test_world_assigns_closest_discovered_food() -> None:
+    world = World()
+    ant = world.ants[0]
+
+    existing_food = world.food[0]
+    existing_food.x = 120
+    existing_food.y = 100
+
+    farther_food = Food(
+        food_id=2,
+        x=130,
+        y=100,
+        nutrition=5,
+    )
+    world.add_entity(farther_food)
+
+    ant.x = 100
+    ant.y = 100
+    ant.speed = 0
+
+    world.update()
+
+    assert ant.food_target is existing_food
+    assert ant.state == AntState.SEEKING_FOOD
+
+
+def test_world_collects_food_for_ant() -> None:
+    world = World()
+    ant = world.ants[0]
+    food = world.food[0]
+
+    ant.x = food.x
+    ant.y = food.y
+    ant.speed = 0
+
+    world.update()
+
+    assert ant.inventory.count() == 1
+    assert food.quantity == 9
+    assert ant.state == AntState.CARRYING_FOOD
+
+
+def test_world_removes_depleted_food() -> None:
+    world = World()
+    ant = world.ants[0]
+    food = world.food[0]
+
+    while food.quantity > 1:
+        food.collect()
+
+    ant.x = food.x
+    ant.y = food.y
+    ant.speed = 0
+
+    world.update()
+
+    assert food not in world.entities
+    assert food not in world.food
+
+
+def test_removing_food_clears_ant_target() -> None:
+    world = World()
+    ant = world.ants[0]
+    food = world.food[0]
+
+    ant.select_food_target(food)
+
+    world.remove_entity(food)
+
+    assert ant.food_target is None
+    assert ant.state == AntState.WANDERING
+
+
+def test_full_ant_does_not_select_more_food() -> None:
+    world = World()
+    ant = world.ants[0]
+    food = world.food[0]
+
+    ant.x = food.x
+    ant.y = food.y
+    ant.speed = 0
+
+    world.update()
+
+    second_food = Food(
+        food_id=2,
+        x=ant.x,
+        y=ant.y,
+        nutrition=5,
+    )
+    world.add_entity(second_food)
+
+    world.update()
+
+    assert ant.food_target is None
+    assert ant.state == AntState.CARRYING_FOOD
+    assert second_food.quantity == 1

@@ -1,6 +1,7 @@
 from collections.abc import Iterator
 from typing import TypeVar
 
+from ant_colony.components import AntState
 from ant_colony.config import settings
 from ant_colony.entities.ant import Ant
 from ant_colony.entities.entity import Entity
@@ -38,6 +39,7 @@ class World:
                 x=200,
                 y=200,
                 nutrition=5,
+                quantity=10,
             )
         )
 
@@ -92,6 +94,9 @@ class World:
         if entity is self.selected_ant:
             self.selected_ant = None
 
+        if isinstance(entity, Food):
+            self._clear_food_target_references(entity)
+
     def entities_of_type(
         self,
         entity_type: type[EntityType],
@@ -127,15 +132,76 @@ class World:
 
         return discovered_entities
 
-    def __iter__(self) -> Iterator[Entity]:
-        return iter(self._entities)
-
     def update(self) -> None:
+        for ant in self.ants:
+            discovered_entities = self.sense_for(
+                ant
+            )
+
+            self._assign_food_target(
+                ant,
+                discovered_entities,
+            )
+
         for entity in tuple(self._entities):
             entity.update()
 
         for ant in self.ants:
-            self.sense_for(ant)
+            self._collect_food_for(ant)
+
+        self._remove_depleted_food()
+
+    def _assign_food_target(
+        self,
+        ant: Ant,
+        discovered_entities: tuple[Entity, ...],
+    ) -> None:
+        if ant.state != AntState.WANDERING:
+            return
+
+        discovered_food = tuple(
+            entity
+            for entity in discovered_entities
+            if isinstance(entity, Food)
+            and not entity.is_depleted
+        )
+
+        if not discovered_food:
+            return
+
+        closest_food = min(
+            discovered_food,
+            key=ant.distance_to,
+        )
+
+        ant.select_food_target(closest_food)
+
+    def _collect_food_for(
+        self,
+        ant: Ant,
+    ) -> None:
+        target = ant.food_target
+
+        if target is None:
+            return
+
+        ant.collect_from(target)
+
+    def _remove_depleted_food(self) -> None:
+        for food in self.food:
+            if food.is_depleted:
+                self.remove_entity(food)
+
+    def _clear_food_target_references(
+        self,
+        food: Food,
+    ) -> None:
+        for ant in self.ants:
+            if ant.food_target is food:
+                ant.clear_food_target()
+
+    def __iter__(self) -> Iterator[Entity]:
+        return iter(self._entities)
 
     def handle_click(
         self,

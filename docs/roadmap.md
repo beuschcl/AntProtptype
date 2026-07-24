@@ -31,20 +31,25 @@
 - Immutable entity observations
 - Automatic discovery during world updates
 - Ant knowledge populated from sensed entities
+- Typed, capacity-limited ant inventory
+- Immutable collected food portions
+- Food quantity and depletion behavior
+- Food target selection
+- Directed movement toward food
+- Proximity-based food collection
+- Automatic removal of depleted food
 
-## Milestone 6 — Food collection
+## Milestone 7 — Return food to the nest
 
 ### Objective
 
-Allow ants to locate and collect discovered food.
+Allow ants carrying food to return it to the colony.
 
 ### Planned capabilities
 
-- Select nearby food as a target
-- Move toward a known food location
-- Collect food within interaction range
-- Store collected food in ant inventory
-- Remove depleted food from the world
-- Preserve separation between sensing, movement, and inventory
-
-
+- Select the nest as a return target
+- Move carrying ants toward the nest
+- Deposit inventory contents at the nest
+- Track colony food reserves
+- Resume wandering after delivery
+- Preserve discovered food knowledge for later use

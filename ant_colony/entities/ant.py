@@ -1,9 +1,14 @@
+from __future__ import annotations
+
 import math
 import random
+from typing import TYPE_CHECKING
 
-from ant_colony.components.inventory import Inventory
-from ant_colony.components.senses import Senses
-from ant_colony.components.state import AntState
+from ant_colony.components import (
+    AntState,
+    Inventory,
+    Senses,
+)
 from ant_colony.config import settings
 from ant_colony.entities.entity import Entity
 from ant_colony.graphics.primitives import Polygon, Shape
@@ -11,6 +16,9 @@ from ant_colony.knowledge import (
     EntityObservation,
     Knowledge,
 )
+
+if TYPE_CHECKING:
+    from ant_colony.entities.food import Food
 
 
 class Ant(Entity):
@@ -46,12 +54,21 @@ class Ant(Entity):
 
         self.state = AntState.WANDERING
         self.senses = Senses()
-        self.inventory = Inventory()
+        self.inventory = Inventory(
+            capacity=settings.ANT_INVENTORY_CAPACITY
+        )
         self.knowledge = Knowledge()
+        self._food_target: Food | None = None
+
+    @property
+    def food_target(self) -> Food | None:
+        return self._food_target
 
     def update(self) -> None:
         if self.state == AntState.WANDERING:
             self.wander()
+        elif self.state == AntState.SEEKING_FOOD:
+            self.move_toward_food()
 
     def observe(
         self,
@@ -67,6 +84,119 @@ class Ant(Entity):
         )
 
         return observation
+
+    def select_food_target(
+        self,
+        food: Food,
+    ) -> bool:
+        if self.inventory.is_full:
+            return False
+
+        if food.is_depleted:
+            return False
+
+        self._food_target = food
+        self.state = AntState.SEEKING_FOOD
+        return True
+
+    def clear_food_target(self) -> None:
+        self._food_target = None
+
+        if self.inventory.is_full:
+            self.state = AntState.CARRYING_FOOD
+        else:
+            self.state = AntState.WANDERING
+
+    def can_collect(
+        self,
+        food: Food,
+    ) -> bool:
+        collection_distance = (
+            settings.ANT_RADIUS
+            + settings.FOOD_RADIUS
+            + settings.ANT_INTERACTION_RADIUS
+        )
+
+        return (
+            not self.inventory.is_full
+            and not food.is_depleted
+            and self.distance_to(food)
+            <= collection_distance
+        )
+
+    def collect_from(
+        self,
+        food: Food,
+    ) -> bool:
+        if not self.can_collect(food):
+            return False
+
+        portion = food.collect()
+
+        if portion is None:
+            return False
+
+        if not self.inventory.add(portion):
+            raise RuntimeError(
+                "Food was collected but could not be "
+                "stored in the ant inventory."
+            )
+
+        self.clear_food_target()
+        return True
+
+    def move_toward_food(self) -> None:
+        if (
+            self._food_target is None
+            or self._food_target.is_depleted
+        ):
+            self.clear_food_target()
+            return
+
+        self.move_toward(
+            self._food_target.x,
+            self._food_target.y,
+        )
+
+    def move_toward(
+        self,
+        x: float,
+        y: float,
+    ) -> None:
+        x_distance = x - self.x
+        y_distance = y - self.y
+        distance = math.hypot(
+            x_distance,
+            y_distance,
+        )
+
+        if distance == 0:
+            return
+
+        movement_distance = min(
+            self.speed,
+            distance,
+        )
+
+        self.x += (
+            x_distance
+            / distance
+            * movement_distance
+        )
+        self.y += (
+            y_distance
+            / distance
+            * movement_distance
+        )
+
+        self.heading = math.degrees(
+            math.atan2(
+                y_distance,
+                x_distance,
+            )
+        )
+
+        self.wrap_position()
 
     def wander(self) -> None:
         heading_radians = math.radians(

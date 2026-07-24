@@ -1,16 +1,15 @@
 #ant_colony/entities/nest.py
-from ant_colony.components.inventory import Inventory
+from ant_colony.config import settings
+from ant_colony.entities.entity import Entity
 
 
-class Nest:
+class Nest(Entity):
 
     def __init__(self, x, y):
 
-        self.x = x
-        self.y = y
-
-        self.inventory = Inventory()
-
-    def store(self, item):
-
-        self.inventory.add(item)
+        super().__init__(
+            "nest",
+            x,
+            y,
+            settings.NEST_DISCOVERABLE_RADIUS,
+        )

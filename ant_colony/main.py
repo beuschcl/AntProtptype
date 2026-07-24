@@ -4,7 +4,7 @@ import pygame
 from ant_colony.config import settings
 from ant_colony.ui.renderer import Renderer
 from ant_colony.world import World
-
+from ant_colony.ui.inspector import Inspector
 
 def main():
 
@@ -20,7 +20,7 @@ def main():
     pygame.display.set_caption(
         settings.WINDOW_TITLE
     )
-
+    inspector = Inspector()
     clock = pygame.time.Clock()
 
     world = World()
@@ -35,9 +35,18 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
 
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                world.handle_click(event.pos)
+
         world.update()
 
         renderer.draw(world)
+        inspector.draw(
+            screen,
+            world.selected_ant,
+        )
+
+        pygame.display.flip()
 
         clock.tick(settings.FPS)
 

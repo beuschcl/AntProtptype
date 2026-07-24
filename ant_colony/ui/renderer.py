@@ -51,12 +51,16 @@ class Renderer:
 
         for ant in world.ants:
 
-            pygame.draw.circle(
-                self.screen,
-                (255, 255, 255),
-                (
-                    int(ant.x),
-                    int(ant.y),
-                ),
-                settings.ANT_RADIUS,
-            )
+            ant.draw(self.screen)
+
+            if ant is world.selected_ant:
+                pygame.draw.circle(
+                    self.screen,
+                    (255, 255, 0),
+                    (
+                        int(ant.x),
+                        int(ant.y),
+                    ),
+                    settings.ANT_RADIUS + 6,
+                    2,
+                )

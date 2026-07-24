@@ -1,32 +1,40 @@
 #ant_colony/entities/ant.py
 import math
 import random
+import pygame
 
 from ant_colony.components.inventory import Inventory
+from ant_colony.components.senses import Senses
 from ant_colony.components.state import AntState
 from ant_colony.config import settings
+from ant_colony.entities.entity import Entity
 from ant_colony.knowledge.knowledge import Knowledge
 
 
-class Ant:
+class Ant(Entity):
 
     def __init__(self, ant_id):
 
-        self.id = ant_id
-
-        self.x = random.randint(
+        x = random.randint(
             0,
             settings.SCREEN_WIDTH,
         )
 
-        self.y = random.randint(
+        y = random.randint(
             0,
             settings.SCREEN_HEIGHT,
         )
 
+        super().__init__(
+            ant_id,
+            x=x,
+            y=y,
+            discoverable_radius=settings.ANT_DISCOVERABLE_RADIUS,
+        )
+
         self.speed = random.uniform(
-            settings.MIN_SPEED,
-            settings.MAX_SPEED,
+            settings.ANT_MIN_SPEED,
+            settings.ANT_MAX_SPEED,
         )
 
         self.heading = random.uniform(
@@ -36,6 +44,7 @@ class Ant:
 
         self.state = AntState.WANDERING
 
+        self.senses = Senses()
         self.inventory = Inventory()
         self.knowledge = Knowledge()
 
@@ -61,8 +70,8 @@ class Ant:
         )
 
         self.heading += random.uniform(
-            -settings.TURN_SPEED,
-            settings.TURN_SPEED,
+            -settings.ANT_TURN_SPEED,
+            settings.ANT_TURN_SPEED,
         )
 
         self.wrap_position()
@@ -80,3 +89,32 @@ class Ant:
 
         elif self.y > settings.SCREEN_HEIGHT:
             self.y = 0
+
+    def draw(self, screen):
+
+        angle = math.radians(self.heading)
+
+        front = (
+            self.x + math.cos(angle) * 12,
+            self.y + math.sin(angle) * 12,
+        )
+
+        left = (
+            self.x + math.cos(angle + 2.5) * 8,
+            self.y + math.sin(angle + 2.5) * 8,
+        )
+
+        right = (
+            self.x + math.cos(angle - 2.5) * 8,
+            self.y + math.sin(angle - 2.5) * 8,
+        )
+
+        pygame.draw.polygon(
+            screen,
+            (255, 255, 255),
+            [
+                front,
+                left,
+                right,
+            ],
+        )

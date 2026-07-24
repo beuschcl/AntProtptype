@@ -17,3 +17,6 @@ class Knowledge:
     def __repr__(self):
 
         return str(self.memories)
+
+    def count(self):
+        return len(self.memories)

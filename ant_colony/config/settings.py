@@ -6,6 +6,7 @@ WINDOW_TITLE = "Ant Colony"
 
 FPS = 60
 
+BACKGROUND_COLOR = (0, 0, 0)
 
 # Colony
 STARTING_ANTS = 10
@@ -13,10 +14,11 @@ STARTING_ANTS = 10
 
 # Ant
 ANT_RADIUS = 10
-MIN_SPEED = 0.5
-MAX_SPEED = 3.0
-TURN_SPEED = 1.0
 
+# Movement
+MIN_SPEED = 0.5
+MAX_SPEED = 2.5
+TURN_SPEED = 2.0
 
 # Food
 FOOD_RADIUS = 10

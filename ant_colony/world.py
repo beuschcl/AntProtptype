@@ -31,7 +31,9 @@ class World:
         ]
 
     def update(self):
-        pass
+
+        for ant in self.ants:
+            ant.update()
 
     def __repr__(self):
 

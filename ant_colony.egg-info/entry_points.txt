@@ -1,0 +1,2 @@
+[console_scripts]
+ant-colony = ant_colony.main:main

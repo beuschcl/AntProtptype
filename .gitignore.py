@@ -5,13 +5,18 @@ __pycache__/
 
 # Virtual environments
 .venv/
+venv/
 
-# PyCharm
+# Test and analysis caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# IDE
 .idea/
 
-# Testing
-.pytest_cache/
-
-# OS
+# Operating systems
 .DS_Store
 Thumbs.db

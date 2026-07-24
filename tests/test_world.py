@@ -6,7 +6,9 @@ from ant_colony.entities.entity import Entity
 from ant_colony.entities.food import Food
 from ant_colony.entities.nest import Nest
 from ant_colony.world import World
-
+from ant_colony.knowledge import (
+    EntityObservation,
+)
 
 def test_world_creates_configured_number_of_ants() -> None:
     world = World()
@@ -169,3 +171,68 @@ def test_click_near_ant_selects_ant() -> None:
     world.handle_click((100, 100))
 
     assert world.selected_ant is ant
+
+def test_world_coordinates_ant_sensing() -> None:
+    world = World()
+    ant = world.ants[0]
+    food = world.food[0]
+
+    ant.x = 100
+    ant.y = 100
+    food.x = 100
+    food.y = 100
+
+    discovered = world.sense_for(ant)
+
+    assert food in discovered
+
+    observation = ant.knowledge.recall(
+        f"entity:food:{food.id}"
+    )
+
+    assert isinstance(
+        observation,
+        EntityObservation,
+    )
+    assert observation.position == (
+        100,
+        100,
+    )
+
+
+def test_world_sensing_excludes_distant_entity() -> None:
+    world = World()
+    ant = world.ants[0]
+    food = world.food[0]
+
+    ant.x = 0
+    ant.y = 0
+    food.x = settings.WORLD_WIDTH
+    food.y = settings.SCREEN_HEIGHT
+
+    discovered = world.sense_for(ant)
+
+    assert food not in discovered
+    assert not ant.knowledge.knows(
+        f"entity:food:{food.id}"
+    )
+
+
+def test_world_sensing_excludes_ant_itself() -> None:
+    world = World()
+    ant = world.ants[0]
+
+    discovered = world.sense_for(ant)
+
+    assert ant not in discovered
+
+
+def test_world_rejects_sensing_for_unregistered_ant() -> None:
+    world = World()
+    unknown_ant = Ant(ant_id=999)
+
+    with pytest.raises(
+        ValueError,
+        match="not registered",
+    ):
+        world.sense_for(unknown_ant)

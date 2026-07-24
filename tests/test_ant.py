@@ -1,7 +1,10 @@
 from ant_colony.config import settings
 from ant_colony.entities.ant import Ant
 from ant_colony.graphics.primitives import Polygon
-
+from ant_colony.entities.food import Food
+from ant_colony.knowledge import (
+    EntityObservation,
+)
 
 def test_ant_starts_inside_world_bounds() -> None:
     ant = Ant(ant_id=1)
@@ -52,3 +55,51 @@ def test_ant_owns_independent_knowledge() -> None:
     assert second_ant.knowledge.recall(
         "food_location"
     ) is None
+
+    def test_ant_observes_entity() -> None:
+        ant = Ant(ant_id=1)
+        food = Food(
+            food_id=7,
+            x=200,
+            y=200,
+            nutrition=5,
+        )
+
+        observation = ant.observe(food)
+
+        assert observation == EntityObservation(
+            entity_id=7,
+            entity_type="food",
+            x=200,
+            y=200,
+        )
+
+        assert ant.knowledge.recall("entity:food:7") == observation
+
+    def test_observing_entity_again_updates_position() -> None:
+        ant = Ant(ant_id=1)
+        food = Food(
+            food_id=7,
+            x=200,
+            y=200,
+            nutrition=5,
+        )
+
+        ant.observe(food)
+
+        food.x = 250
+        food.y = 300
+
+        ant.observe(food)
+
+        observation = ant.knowledge.recall("entity:food:7")
+
+        assert isinstance(
+            observation,
+            EntityObservation,
+        )
+        assert observation.position == (
+            250,
+            300,
+        )
+        assert ant.knowledge.count() == 1

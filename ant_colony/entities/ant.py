@@ -1,4 +1,3 @@
-#ant_colony/entities/ant.py
 import math
 import random
 
@@ -8,7 +7,11 @@ from ant_colony.components.state import AntState
 from ant_colony.config import settings
 from ant_colony.entities.entity import Entity
 from ant_colony.graphics.primitives import Polygon, Shape
-from ant_colony.knowledge import Knowledge
+from ant_colony.knowledge import (
+    EntityObservation,
+    Knowledge,
+)
+
 
 class Ant(Entity):
     def __init__(self, ant_id: int) -> None:
@@ -26,7 +29,9 @@ class Ant(Entity):
             entity_id=ant_id,
             x=x,
             y=y,
-            discoverable_radius=settings.ANT_DISCOVERABLE_RADIUS,
+            discoverable_radius=(
+                settings.ANT_DISCOVERABLE_RADIUS
+            ),
         )
 
         self.speed = random.uniform(
@@ -48,11 +53,35 @@ class Ant(Entity):
         if self.state == AntState.WANDERING:
             self.wander()
 
-    def wander(self) -> None:
-        heading_radians = math.radians(self.heading)
+    def observe(
+        self,
+        entity: Entity,
+    ) -> EntityObservation:
+        observation = EntityObservation.from_entity(
+            entity
+        )
 
-        self.x += math.cos(heading_radians) * self.speed
-        self.y += math.sin(heading_radians) * self.speed
+        self.knowledge.remember(
+            observation.memory_name,
+            observation,
+        )
+
+        return observation
+
+    def wander(self) -> None:
+        heading_radians = math.radians(
+            self.heading
+        )
+
+        self.x += (
+            math.cos(heading_radians)
+            * self.speed
+        )
+
+        self.y += (
+            math.sin(heading_radians)
+            * self.speed
+        )
 
         self.heading += random.uniform(
             -settings.ANT_TURN_SPEED,
@@ -73,32 +102,52 @@ class Ant(Entity):
             self.y = 0
 
     def shapes(self) -> tuple[Shape, ...]:
-        heading_radians = math.radians(self.heading)
+        heading_radians = math.radians(
+            self.heading
+        )
 
         front = (
             self.x
-            + math.cos(heading_radians) * settings.ANT_DRAW_LENGTH,
+            + math.cos(heading_radians)
+            * settings.ANT_DRAW_LENGTH,
             self.y
-            + math.sin(heading_radians) * settings.ANT_DRAW_LENGTH,
+            + math.sin(heading_radians)
+            * settings.ANT_DRAW_LENGTH,
         )
 
         left = (
             self.x
-            + math.cos(heading_radians + 2.5) * settings.ANT_DRAW_WIDTH,
+            + math.cos(
+                heading_radians + 2.5
+            )
+            * settings.ANT_DRAW_WIDTH,
             self.y
-            + math.sin(heading_radians + 2.5) * settings.ANT_DRAW_WIDTH,
+            + math.sin(
+                heading_radians + 2.5
+            )
+            * settings.ANT_DRAW_WIDTH,
         )
 
         right = (
             self.x
-            + math.cos(heading_radians - 2.5) * settings.ANT_DRAW_WIDTH,
+            + math.cos(
+                heading_radians - 2.5
+            )
+            * settings.ANT_DRAW_WIDTH,
             self.y
-            + math.sin(heading_radians - 2.5) * settings.ANT_DRAW_WIDTH,
+            + math.sin(
+                heading_radians - 2.5
+            )
+            * settings.ANT_DRAW_WIDTH,
         )
 
         return (
             Polygon(
-                points=(front, left, right),
+                points=(
+                    front,
+                    left,
+                    right,
+                ),
                 color=settings.ANT_COLOR,
             ),
         )

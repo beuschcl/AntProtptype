@@ -7,7 +7,10 @@ from ant_colony.entities.entity import Entity
 from ant_colony.entities.food import Food
 from ant_colony.entities.nest import Nest
 
-EntityType = TypeVar("EntityType", bound=Entity)
+EntityType = TypeVar(
+    "EntityType",
+    bound=Entity,
+)
 
 
 class World:
@@ -22,8 +25,12 @@ class World:
             )
         )
 
-        for ant_id in range(settings.STARTING_ANTS):
-            self.add_entity(Ant(ant_id))
+        for ant_id in range(
+            settings.STARTING_ANTS
+        ):
+            self.add_entity(
+                Ant(ant_id)
+            )
 
         self.add_entity(
             Food(
@@ -58,20 +65,28 @@ class World:
 
         return nests[0]
 
-    def add_entity(self, entity: Entity) -> None:
+    def add_entity(
+        self,
+        entity: Entity,
+    ) -> None:
         if entity in self._entities:
             raise ValueError(
-                "The entity is already registered with this world."
+                "The entity is already registered "
+                "with this world."
             )
 
         self._entities.append(entity)
 
-    def remove_entity(self, entity: Entity) -> None:
+    def remove_entity(
+        self,
+        entity: Entity,
+    ) -> None:
         try:
             self._entities.remove(entity)
         except ValueError as error:
             raise ValueError(
-                "The entity is not registered with this world."
+                "The entity is not registered "
+                "with this world."
             ) from error
 
         if entity is self.selected_ant:
@@ -84,8 +99,33 @@ class World:
         return tuple(
             entity
             for entity in self._entities
-            if isinstance(entity, entity_type)
+            if isinstance(
+                entity,
+                entity_type,
+            )
         )
+
+    def sense_for(
+        self,
+        ant: Ant,
+    ) -> tuple[Entity, ...]:
+        if ant not in self._entities:
+            raise ValueError(
+                "The ant is not registered "
+                "with this world."
+            )
+
+        discovered_entities = (
+            ant.senses.detect(
+                observer=ant,
+                candidates=self.entities,
+            )
+        )
+
+        for entity in discovered_entities:
+            ant.observe(entity)
+
+        return discovered_entities
 
     def __iter__(self) -> Iterator[Entity]:
         return iter(self._entities)
@@ -94,20 +134,33 @@ class World:
         for entity in tuple(self._entities):
             entity.update()
 
-    def handle_click(self, position: tuple[float, float]) -> None:
+        for ant in self.ants:
+            self.sense_for(ant)
+
+    def handle_click(
+        self,
+        position: tuple[float, float],
+    ) -> None:
         mouse_x, mouse_y = position
 
-        if not self._is_inside_world(mouse_x, mouse_y):
+        if not self._is_inside_world(
+            mouse_x,
+            mouse_y,
+        ):
             self.selected_ant = None
             return
 
         closest_ant: Ant | None = None
-        closest_distance = settings.CLICK_RADIUS
+        closest_distance = (
+            settings.CLICK_RADIUS
+        )
 
         for ant in self.ants:
-            distance = ant.distance_to_position(
-                mouse_x,
-                mouse_y,
+            distance = (
+                ant.distance_to_position(
+                    mouse_x,
+                    mouse_y,
+                )
             )
 
             if distance < closest_distance:
@@ -117,10 +170,15 @@ class World:
         self.selected_ant = closest_ant
 
     @staticmethod
-    def _is_inside_world(x: float, y: float) -> bool:
+    def _is_inside_world(
+        x: float,
+        y: float,
+    ) -> bool:
         return (
             0 <= x <= settings.WORLD_WIDTH
-            and 0 <= y <= settings.SCREEN_HEIGHT
+            and 0
+            <= y
+            <= settings.SCREEN_HEIGHT
         )
 
     def __repr__(self) -> str:

@@ -26,16 +26,25 @@
 - Encapsulated ant knowledge store
 - Knowledge recall and replacement
 - Knowledge sharing between ants
+- Configurable ant sensing component
+- Entity detection using overlapping discovery radii
+- Immutable entity observations
+- Automatic discovery during world updates
+- Ant knowledge populated from sensed entities
 
-## Milestone 5 — Sensing and discovery
+## Milestone 6 — Food collection
 
-### Goal
+### Objective
 
-Allow ants to discover nearby entities.
+Allow ants to locate and collect discovered food.
 
-### Interaction rule
+### Planned capabilities
 
-An entity is detectable when the distance between it and the ant is less than the combined sensing and discoverability radii.
+- Select nearby food as a target
+- Move toward a known food location
+- Collect food within interaction range
+- Store collected food in ant inventory
+- Remove depleted food from the world
+- Preserve separation between sensing, movement, and inventory
 
-```text
-distance < ant sensing radius + entity discoverable radius
+

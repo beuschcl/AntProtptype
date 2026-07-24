@@ -1,0 +1,23 @@
+#config/settings.py
+SCREEN_WIDTH = 1000
+SCREEN_HEIGHT = 700
+
+WINDOW_TITLE = "Ant Colony"
+
+FPS = 60
+
+
+# Colony
+STARTING_ANTS = 10
+
+
+# Ant
+ANT_RADIUS = 10
+MIN_SPEED = 0.5
+MAX_SPEED = 3.0
+TURN_SPEED = 1.0
+
+
+# Food
+FOOD_RADIUS = 10
+FOOD_DECAY_TIME = 5000

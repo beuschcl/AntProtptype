@@ -20,3 +20,7 @@ class Entity:
         dy = self.y - other.y
 
         return (dx * dx + dy * dy) ** 0.5
+
+    def shapes(self):
+
+        return []

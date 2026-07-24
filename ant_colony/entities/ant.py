@@ -1,7 +1,7 @@
 #ant_colony/entities/ant.py
 import math
 import random
-import pygame
+
 
 from ant_colony.components.inventory import Inventory
 from ant_colony.components.senses import Senses
@@ -9,7 +9,7 @@ from ant_colony.components.state import AntState
 from ant_colony.config import settings
 from ant_colony.entities.entity import Entity
 from ant_colony.knowledge.knowledge import Knowledge
-
+from ant_colony.graphics.primitives import Polygon
 
 class Ant(Entity):
 
@@ -90,31 +90,28 @@ class Ant(Entity):
         elif self.y > settings.SCREEN_HEIGHT:
             self.y = 0
 
-    def draw(self, screen):
+    def shapes(self):
 
         angle = math.radians(self.heading)
 
         front = (
-            self.x + math.cos(angle) * 12,
-            self.y + math.sin(angle) * 12,
+            self.x + math.cos(angle) * settings.ANT_DRAW_LENGTH,
+            self.y + math.sin(angle) * settings.ANT_DRAW_LENGTH,
         )
 
         left = (
-            self.x + math.cos(angle + 2.5) * 8,
-            self.y + math.sin(angle + 2.5) * 8,
+            self.x + math.cos(angle + 2.5) * settings.ANT_DRAW_WIDTH,
+            self.y + math.sin(angle + 2.5) * settings.ANT_DRAW_WIDTH,
         )
 
         right = (
-            self.x + math.cos(angle - 2.5) * 8,
-            self.y + math.sin(angle - 2.5) * 8,
+            self.x + math.cos(angle - 2.5) * settings.ANT_DRAW_WIDTH,
+            self.y + math.sin(angle - 2.5) * settings.ANT_DRAW_WIDTH,
         )
 
-        pygame.draw.polygon(
-            screen,
-            (255, 255, 255),
-            [
-                front,
-                left,
-                right,
-            ],
-        )
+        return [
+            Polygon(
+                [front, left, right],
+                (255, 255, 255),
+            )
+        ]

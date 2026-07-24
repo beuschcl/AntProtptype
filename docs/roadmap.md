@@ -18,47 +18,10 @@
 - Graphics primitives
 - Camera abstraction
 - Initial repository documentation and packaging
-
-## Milestone 2 — Rendering boundary
-
-### Goal
-
-Complete the separation between simulation objects and Pygame rendering.
-
-### Work
-
-- Remove Pygame imports from entities and world logic
-- Make entities expose immutable shape descriptions
-- Make the renderer draw all supported shapes
-- Remove duplicate drawing paths
-- Define selection-ring rendering in the UI layer
-- Use world dimensions instead of full screen dimensions for ant movement
-
-### Exit criteria
-
-- Pygame is limited to application and graphics/UI packages
-- `World` contains no drawing method
-- Entities contain no direct Pygame drawing calls
-- The application remains visually equivalent
-
-## Milestone 3 — Entity collection
-
-### Goal
-
-Give the world one consistent entity model.
-
-### Work
-
-- Introduce `world.entities`
-- Support filtered access to ants, food, and nests
-- Add explicit entity registration and removal methods
-- Preserve selected-ant behavior
-
-### Exit criteria
-
-- World-level systems can iterate over all entities
-- Entity removal is controlled through world methods
-- Existing simulation behavior remains intact
+- Rendering boundary
+- Unified world entity collection
+- Controlled entity registration and removal
+- Read-only filtered entity views
 
 ## Milestone 4 — Knowledge system
 

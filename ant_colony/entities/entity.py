@@ -1,5 +1,6 @@
-#entities/entity.py
 from __future__ import annotations
+
+import math
 
 from ant_colony.graphics.primitives import Shape
 
@@ -17,11 +18,24 @@ class Entity:
         self.y = y
         self.discoverable_radius = discoverable_radius
 
-    def distance_to(self, other: Entity) -> float:
-        dx = self.x - other.x
-        dy = self.y - other.y
+    def update(self) -> None:
+        """Advance the entity by one simulation step."""
 
-        return (dx * dx + dy * dy) ** 0.5
+    def distance_to(self, other: Entity) -> float:
+        return self.distance_to_position(
+            other.x,
+            other.y,
+        )
+
+    def distance_to_position(
+        self,
+        x: float,
+        y: float,
+    ) -> float:
+        return math.hypot(
+            self.x - x,
+            self.y - y,
+        )
 
     def shapes(self) -> tuple[Shape, ...]:
         return ()

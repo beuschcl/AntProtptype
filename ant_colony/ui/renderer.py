@@ -19,13 +19,8 @@ class Renderer:
     def draw(self, world: World) -> None:
         self.screen.fill(settings.BACKGROUND_COLOR)
 
-        self._draw_entity(world.nest)
-
-        for food in world.food:
-            self._draw_entity(food)
-
-        for ant in world.ants:
-            self._draw_entity(ant)
+        for entity in world.entities:
+            self._draw_entity(entity)
 
         if world.selected_ant is not None:
             self._draw_selection_ring(world.selected_ant)

@@ -1,0 +1,102 @@
+from ant_colony.components import (
+    AntState,
+    FoodPortion,
+)
+from ant_colony.ui.inspector_snapshot import (
+    InspectorSnapshot,
+)
+from ant_colony.world import World
+
+
+def test_snapshot_contains_colony_summary() -> None:
+    world = World()
+
+    snapshot = InspectorSnapshot.from_world(world)
+
+    assert snapshot.ant_count == len(world.ants)
+    assert snapshot.food_source_count == len(world.food)
+    assert snapshot.remaining_food_portions == 10
+    assert snapshot.nest_food_reserve == 0
+    assert snapshot.delivered_portions == 0
+    assert snapshot.selected_ant_id is None
+
+
+def test_snapshot_contains_nest_delivery_totals() -> None:
+    world = World()
+
+    world.nest.deposit(
+        (
+            FoodPortion(
+                source_id=1,
+                nutrition=5,
+            ),
+            FoodPortion(
+                source_id=1,
+                nutrition=5,
+            ),
+        )
+    )
+
+    snapshot = InspectorSnapshot.from_world(world)
+
+    assert snapshot.nest_food_reserve == 10
+    assert snapshot.delivered_portions == 2
+
+
+def test_snapshot_contains_selected_ant_details() -> None:
+    world = World()
+    ant = world.ants[0]
+
+    ant.x = 100
+    ant.y = 200
+    ant.speed = 1.25
+    ant.heading = 90
+    ant.state = AntState.WANDERING
+
+    world.selected_ant = ant
+
+    snapshot = InspectorSnapshot.from_world(world)
+
+    assert snapshot.selected_ant_id == ant.id
+    assert snapshot.selected_ant_x == 100
+    assert snapshot.selected_ant_y == 200
+    assert snapshot.selected_ant_speed == 1.25
+    assert snapshot.selected_ant_heading == 90
+    assert snapshot.selected_ant_state == "wandering"
+    assert snapshot.selected_ant_inventory_count == 0
+    assert snapshot.selected_ant_inventory_capacity == 2
+    assert snapshot.selected_ant_target == "None"
+
+
+def test_snapshot_identifies_food_target() -> None:
+    world = World()
+    ant = world.ants[0]
+    food = world.food[0]
+
+    ant.select_food_target(food)
+    world.selected_ant = ant
+
+    snapshot = InspectorSnapshot.from_world(world)
+
+    assert snapshot.selected_ant_target == (
+        f"Food {food.id}"
+    )
+
+
+def test_snapshot_identifies_nest_target() -> None:
+    world = World()
+    ant = world.ants[0]
+
+    ant.inventory.add(
+        FoodPortion(
+            source_id=1,
+            nutrition=5,
+        )
+    )
+    ant.select_nest_target(world.nest)
+    world.selected_ant = ant
+
+    snapshot = InspectorSnapshot.from_world(world)
+
+    assert snapshot.selected_ant_target == "Nest"
+    assert snapshot.selected_ant_inventory_count == 1

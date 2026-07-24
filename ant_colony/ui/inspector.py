@@ -1,11 +1,15 @@
 import pygame
 
 from ant_colony.config import settings
-from ant_colony.entities.ant import Ant
+from ant_colony.ui.inspector_snapshot import (
+    InspectorSnapshot,
+)
+from ant_colony.world import World
 
 
 class Inspector:
     LINE_HEIGHT = 25
+    SECTION_SPACING = 15
     TOP_PADDING = 20
     LEFT_PADDING = 20
     FONT_SIZE = 24
@@ -19,23 +23,39 @@ class Inspector:
     def draw(
         self,
         screen: pygame.Surface,
-        ant: Ant | None,
+        world: World,
     ) -> None:
-        if ant is None:
-            return
-
-        lines = (
-            f"ID: {ant.id}",
-            f"Position: ({int(ant.x)}, {int(ant.y)})",
-            f"Speed: {ant.speed:.2f}",
-            f"Heading: {ant.heading:.1f}",
-            f"State: {ant.state.value}",
-            f"Knowledge: {ant.knowledge.count()}",
-        )
+        snapshot = InspectorSnapshot.from_world(world)
 
         x = settings.WORLD_WIDTH + self.LEFT_PADDING
         y = self.TOP_PADDING
 
+        y = self._draw_lines(
+            screen=screen,
+            lines=self._colony_lines(snapshot),
+            x=x,
+            y=y,
+        )
+
+        if snapshot.selected_ant_id is None:
+            return
+
+        y += self.SECTION_SPACING
+
+        self._draw_lines(
+            screen=screen,
+            lines=self._selected_ant_lines(snapshot),
+            x=x,
+            y=y,
+        )
+
+    def _draw_lines(
+        self,
+        screen: pygame.Surface,
+        lines: tuple[str, ...],
+        x: int,
+        y: int,
+    ) -> int:
         for line in lines:
             text = self.font.render(
                 line,
@@ -49,3 +69,63 @@ class Inspector:
             )
 
             y += self.LINE_HEIGHT
+
+        return y
+
+    @staticmethod
+    def _colony_lines(
+        snapshot: InspectorSnapshot,
+    ) -> tuple[str, ...]:
+        return (
+            "Colony",
+            f"Ants: {snapshot.ant_count}",
+            (
+                "Food sources: "
+                f"{snapshot.food_source_count}"
+            ),
+            (
+                "Food portions: "
+                f"{snapshot.remaining_food_portions}"
+            ),
+            (
+                "Nest reserve: "
+                f"{snapshot.nest_food_reserve}"
+            ),
+            (
+                "Delivered: "
+                f"{snapshot.delivered_portions}"
+            ),
+        )
+
+    @staticmethod
+    def _selected_ant_lines(
+        snapshot: InspectorSnapshot,
+    ) -> tuple[str, ...]:
+        return (
+            "Selected Ant",
+            f"ID: {snapshot.selected_ant_id}",
+            (
+                "Position: "
+                f"({int(snapshot.selected_ant_x or 0)}, "
+                f"{int(snapshot.selected_ant_y or 0)})"
+            ),
+            (
+                "Speed: "
+                f"{snapshot.selected_ant_speed or 0:.2f}"
+            ),
+            (
+                "Heading: "
+                f"{snapshot.selected_ant_heading or 0:.1f}"
+            ),
+            f"State: {snapshot.selected_ant_state}",
+            (
+                "Inventory: "
+                f"{snapshot.selected_ant_inventory_count}/"
+                f"{snapshot.selected_ant_inventory_capacity}"
+            ),
+            (
+                "Knowledge: "
+                f"{snapshot.selected_ant_knowledge_count}"
+            ),
+            f"Target: {snapshot.selected_ant_target}",
+        )

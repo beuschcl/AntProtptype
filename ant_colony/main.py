@@ -18,12 +18,17 @@ def main() -> None:
             )
         )
 
-        pygame.display.set_caption(settings.WINDOW_TITLE)
+        pygame.display.set_caption(
+            settings.WINDOW_TITLE
+        )
 
         clock = pygame.time.Clock()
         camera = Camera()
         world = World()
-        renderer = Renderer(screen, camera)
+        renderer = Renderer(
+            screen,
+            camera,
+        )
         inspector = Inspector()
 
         running = True
@@ -34,17 +39,22 @@ def main() -> None:
                     running = False
 
                 elif event.type == pygame.MOUSEBUTTONDOWN:
-                    world_position = camera.screen_to_world(
-                        *event.pos,
+                    world_position = (
+                        camera.screen_to_world(
+                            *event.pos,
+                        )
                     )
-                    world.handle_click(world_position)
+
+                    world.handle_click(
+                        world_position
+                    )
 
             world.update()
 
             renderer.draw(world)
             inspector.draw(
                 screen,
-                world.selected_ant,
+                world,
             )
 
             pygame.display.flip()

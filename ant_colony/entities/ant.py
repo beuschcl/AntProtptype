@@ -8,8 +8,7 @@ from ant_colony.components.state import AntState
 from ant_colony.config import settings
 from ant_colony.entities.entity import Entity
 from ant_colony.graphics.primitives import Polygon, Shape
-from ant_colony.knowledge.knowledge import Knowledge
-
+from ant_colony.knowledge import Knowledge
 
 class Ant(Entity):
     def __init__(self, ant_id: int) -> None:

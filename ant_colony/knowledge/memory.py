@@ -1,11 +1,17 @@
-#ant_colony/knowledge/memory.py
+from dataclasses import dataclass
+from typing import TypeAlias
+
+MemoryValue: TypeAlias = object
+
+
+@dataclass(frozen=True, slots=True)
 class Memory:
+    name: str
+    value: MemoryValue
 
-    def __init__(self, name, value):
+    def __post_init__(self) -> None:
+        if not self.name.strip():
+            raise ValueError("Memory name cannot be empty.")
 
-        self.name = name
-        self.value = value
-
-    def __repr__(self):
-
-        return f"{self.name}: {self.value}"
+    def __repr__(self) -> str:
+        return f"{self.name}: {self.value!r}"

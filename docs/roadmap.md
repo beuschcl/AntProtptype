@@ -22,28 +22,10 @@
 - Unified world entity collection
 - Controlled entity registration and removal
 - Read-only filtered entity views
-
-## Milestone 4 — Knowledge system
-
-### Goal
-
-Create an object-based memory system owned by each ant.
-
-### Work
-
-- Define memory objects
-- Implement `remember`
-- Implement `recall`
-- Implement `count`
-- Implement `share_with`
-- Prevent uncontrolled duplicate memories
-- Add unit tests
-
-### Exit criteria
-
-- Ants can retain knowledge of discovered entities
-- Memories can be queried by type or subject
-- Knowledge can be shared between ants
+- Immutable memory value objects
+- Encapsulated ant knowledge store
+- Knowledge recall and replacement
+- Knowledge sharing between ants
 
 ## Milestone 5 — Sensing and discovery
 

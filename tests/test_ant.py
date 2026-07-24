@@ -35,3 +35,20 @@ def test_ant_exposes_polygon_shape() -> None:
 
     assert len(shapes) == 1
     assert isinstance(shapes[0], Polygon)
+
+def test_ant_owns_independent_knowledge() -> None:
+    first_ant = Ant(ant_id=1)
+    second_ant = Ant(ant_id=2)
+
+    first_ant.knowledge.remember(
+        "food_location",
+        (200, 200),
+    )
+
+    assert first_ant.knowledge.recall(
+        "food_location"
+    ) == (200, 200)
+
+    assert second_ant.knowledge.recall(
+        "food_location"
+    ) is None

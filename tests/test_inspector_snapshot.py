@@ -2,6 +2,7 @@ from ant_colony.components import (
     AntState,
     FoodPortion,
 )
+from ant_colony.entities.pheromone import Pheromone
 from ant_colony.ui.inspector_snapshot import (
     InspectorSnapshot,
 )
@@ -19,6 +20,7 @@ def test_snapshot_contains_colony_summary() -> None:
     assert snapshot.nest_food_reserve == 0
     assert snapshot.delivered_portions == 0
     assert snapshot.selected_ant_id is None
+    assert snapshot.pheromone_count == 0
 
 
 def test_snapshot_contains_nest_delivery_totals() -> None:
@@ -100,3 +102,25 @@ def test_snapshot_identifies_nest_target() -> None:
 
     assert snapshot.selected_ant_target == "Nest"
     assert snapshot.selected_ant_inventory_count == 1
+
+def test_snapshot_contains_pheromone_count() -> None:
+    world = World()
+
+    world.add_entity(
+        Pheromone(
+            pheromone_id=1,
+            x=100,
+            y=100,
+        )
+    )
+    world.add_entity(
+        Pheromone(
+            pheromone_id=2,
+            x=200,
+            y=200,
+        )
+    )
+
+    snapshot = InspectorSnapshot.from_world(world)
+
+    assert snapshot.pheromone_count == 2

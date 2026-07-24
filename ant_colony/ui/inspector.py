@@ -95,6 +95,9 @@ class Inspector:
                 "Delivered: "
                 f"{snapshot.delivered_portions}"
             ),
+
+
+            f"Pheromones: {snapshot.pheromone_count}",
         )
 
     @staticmethod

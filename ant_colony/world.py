@@ -7,6 +7,7 @@ from ant_colony.entities.ant import Ant
 from ant_colony.entities.entity import Entity
 from ant_colony.entities.food import Food
 from ant_colony.entities.nest import Nest
+from ant_colony.entities.pheromone import Pheromone
 
 EntityType = TypeVar(
     "EntityType",
@@ -18,6 +19,8 @@ class World:
     def __init__(self) -> None:
         self._entities: list[Entity] = []
         self.selected_ant: Ant | None = None
+        self._next_pheromone_id = 1
+        self._update_count = 0
 
         self.add_entity(
             Nest(
@@ -54,6 +57,10 @@ class World:
     @property
     def food(self) -> tuple[Food, ...]:
         return self.entities_of_type(Food)
+
+    @property
+    def pheromones(self) -> tuple[Pheromone, ...]:
+        return self.entities_of_type(Pheromone)
 
     @property
     def nest(self) -> Nest:
@@ -151,7 +158,10 @@ class World:
             self._assign_nest_target(ant)
             self._deposit_food_for(ant)
 
+        self._deposit_pheromones()
         self._remove_depleted_food()
+        self._remove_depleted_pheromones()
+        self._update_count += 1
 
     def _assign_food_target(
         self,
@@ -213,6 +223,32 @@ class World:
 
         ant.collect_from(target)
 
+    def _deposit_pheromones(self) -> None:
+        if self._update_count % settings.PHEROMONE_DEPOSIT_INTERVAL != 0:
+            return
+
+        for ant in self.ants:
+            if ant.state != AntState.CARRYING_FOOD:
+                continue
+
+            if ant.inventory.is_empty:
+                continue
+
+            self.add_entity(
+                Pheromone(
+                    pheromone_id=self._next_pheromone_id,
+                    x=ant.x,
+                    y=ant.y,
+                )
+            )
+
+            self._next_pheromone_id += 1
+
+    def _remove_depleted_pheromones(self) -> None:
+        for pheromone in self.pheromones:
+            if pheromone.is_depleted:
+                self.remove_entity(pheromone)
+                
     def _remove_depleted_food(self) -> None:
         for food in self.food:
             if food.is_depleted:
@@ -278,6 +314,7 @@ class World:
             f"World("
             f"entities={len(self._entities)}, "
             f"ants={len(self.ants)}, "
-            f"food={len(self.food)}"
+            f"food={len(self.food)}, "
+            f"pheromones={len(self.pheromones)}"
             f")"
         )

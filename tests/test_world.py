@@ -9,6 +9,7 @@ from ant_colony.entities.ant import Ant
 from ant_colony.entities.entity import Entity
 from ant_colony.entities.food import Food
 from ant_colony.entities.nest import Nest
+from ant_colony.entities.pheromone import Pheromone
 from ant_colony.knowledge import EntityObservation
 from ant_colony.world import World
 
@@ -394,3 +395,96 @@ def test_world_does_not_replace_existing_nest_target() -> None:
     world._assign_nest_target(ant)
 
     assert ant.nest_target is nest
+
+def test_world_exposes_pheromones() -> None:
+    world = World()
+
+    pheromone = Pheromone(
+        pheromone_id=1,
+        x=100,
+        y=100,
+    )
+    world.add_entity(pheromone)
+
+    assert world.pheromones == (pheromone,)
+
+
+def test_world_deposits_pheromone_for_carrying_ant() -> None:
+    world = World()
+    ant = world.ants[0]
+
+    ant.x = 100
+    ant.y = 200
+    ant.speed = 0
+
+    ant.inventory.add(
+        FoodPortion(
+            source_id=1,
+            nutrition=5,
+        )
+    )
+    ant.select_nest_target(world.nest)
+
+    world.update()
+
+    assert len(world.pheromones) == 1
+
+    pheromone = world.pheromones[0]
+
+    assert pheromone.x == 100
+    assert pheromone.y == 200
+
+
+def test_world_does_not_deposit_for_wandering_ant() -> None:
+    world = World()
+
+    for ant in world.ants:
+        ant.speed = 0
+
+    world.update()
+
+    assert world.pheromones == ()
+
+
+def test_world_respects_pheromone_deposit_interval() -> None:
+    world = World()
+    ant = world.ants[0]
+
+    ant.x = 100
+    ant.y = 200
+    ant.speed = 0
+
+    ant.inventory.add(
+        FoodPortion(
+            source_id=1,
+            nutrition=5,
+        )
+    )
+    ant.select_nest_target(world.nest)
+
+    world.update()
+    initial_count = len(world.pheromones)
+
+    world.update()
+
+    assert initial_count == 1
+    assert len(world.pheromones) == 1
+
+
+def test_world_removes_depleted_pheromone() -> None:
+    world = World()
+
+    pheromone = Pheromone(
+        pheromone_id=1,
+        x=100,
+        y=100,
+        strength=(
+            settings.PHEROMONE_EVAPORATION_RATE / 2
+        ),
+    )
+    world.add_entity(pheromone)
+
+    world.update()
+
+    assert pheromone not in world.entities
+    assert world.pheromones == ()

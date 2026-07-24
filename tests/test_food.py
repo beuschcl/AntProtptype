@@ -1,6 +1,6 @@
 import pytest
 
-from ant_colony.components import FoodPortion
+from ant_colony.components import ResourcePortion
 from ant_colony.entities.food import Food
 
 
@@ -28,7 +28,7 @@ def test_food_collect_returns_portion() -> None:
 
     portion = food.collect()
 
-    assert portion == FoodPortion(
+    assert portion == ResourcePortion(
         source_id=7,
         nutrition=5,
     )

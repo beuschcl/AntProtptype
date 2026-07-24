@@ -1,4 +1,4 @@
-from ant_colony.components import FoodPortion
+from ant_colony.components import ResourcePortion
 from ant_colony.entities.nest import Nest
 
 
@@ -14,11 +14,11 @@ def test_nest_deposits_food_portions() -> None:
 
     deposited_nutrition = nest.deposit(
         (
-            FoodPortion(
+            ResourcePortion(
                 source_id=1,
                 nutrition=5,
             ),
-            FoodPortion(
+            ResourcePortion(
                 source_id=2,
                 nutrition=3,
             ),
@@ -35,7 +35,7 @@ def test_nest_accumulates_multiple_deposits() -> None:
 
     nest.deposit(
         (
-            FoodPortion(
+            ResourcePortion(
                 source_id=1,
                 nutrition=5,
             ),
@@ -43,7 +43,7 @@ def test_nest_accumulates_multiple_deposits() -> None:
     )
     nest.deposit(
         (
-            FoodPortion(
+            ResourcePortion(
                 source_id=2,
                 nutrition=3,
             ),

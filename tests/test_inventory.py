@@ -1,8 +1,8 @@
 import pytest
 
 from ant_colony.components import (
-    FoodPortion,
     Inventory,
+    ResourcePortion,
 )
 
 
@@ -17,7 +17,7 @@ def test_inventory_starts_empty() -> None:
 
 def test_inventory_adds_food_portion() -> None:
     inventory = Inventory(capacity=2)
-    portion = FoodPortion(
+    portion = ResourcePortion(
         source_id=1,
         nutrition=5,
     )
@@ -26,16 +26,16 @@ def test_inventory_adds_food_portion() -> None:
 
     assert added
     assert inventory.items == (portion,)
-    assert inventory.total_nutrition == 5
+    assert inventory.total_value == 5
 
 
 def test_inventory_rejects_item_when_full() -> None:
     inventory = Inventory(capacity=1)
-    first = FoodPortion(
+    first = ResourcePortion(
         source_id=1,
         nutrition=5,
     )
-    second = FoodPortion(
+    second = ResourcePortion(
         source_id=2,
         nutrition=10,
     )
@@ -47,7 +47,7 @@ def test_inventory_rejects_item_when_full() -> None:
 
 def test_inventory_removes_item() -> None:
     inventory = Inventory(capacity=1)
-    portion = FoodPortion(
+    portion = ResourcePortion(
         source_id=1,
         nutrition=5,
     )
@@ -61,7 +61,7 @@ def test_inventory_removes_item() -> None:
 
 def test_inventory_returns_false_for_unknown_item() -> None:
     inventory = Inventory(capacity=1)
-    portion = FoodPortion(
+    portion = ResourcePortion(
         source_id=1,
         nutrition=5,
     )
@@ -71,11 +71,11 @@ def test_inventory_returns_false_for_unknown_item() -> None:
 
 def test_inventory_clear_returns_removed_items() -> None:
     inventory = Inventory(capacity=2)
-    first = FoodPortion(
+    first = ResourcePortion(
         source_id=1,
         nutrition=5,
     )
-    second = FoodPortion(
+    second = ResourcePortion(
         source_id=2,
         nutrition=10,
     )
@@ -104,7 +104,7 @@ def test_food_portion_rejects_invalid_nutrition() -> None:
         ValueError,
         match="greater than zero",
     ):
-        FoodPortion(
+        ResourcePortion(
             source_id=1,
             nutrition=0,
         )

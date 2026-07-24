@@ -1,17 +1,6 @@
 from collections.abc import Iterator
-from dataclasses import dataclass
 
-
-@dataclass(frozen=True, slots=True)
-class FoodPortion:
-    source_id: int | str
-    nutrition: int
-
-    def __post_init__(self) -> None:
-        if self.nutrition <= 0:
-            raise ValueError(
-                "Food nutrition must be greater than zero."
-            )
+from ant_colony.components.resources import ResourcePortion
 
 
 class Inventory:
@@ -25,14 +14,14 @@ class Inventory:
             )
 
         self._capacity = capacity
-        self._items: list[FoodPortion] = []
+        self._items: list[ResourcePortion] = []
 
     @property
     def capacity(self) -> int:
         return self._capacity
 
     @property
-    def items(self) -> tuple[FoodPortion, ...]:
+    def items(self) -> tuple[ResourcePortion, ...]:
         return tuple(self._items)
 
     @property
@@ -44,15 +33,15 @@ class Inventory:
         return len(self._items) >= self._capacity
 
     @property
-    def total_nutrition(self) -> int:
+    def total_value(self) -> int:
         return sum(
-            item.nutrition
+            item.value
             for item in self._items
         )
 
     def add(
         self,
-        item: FoodPortion,
+        item: ResourcePortion,
     ) -> bool:
         if self.is_full:
             return False
@@ -62,7 +51,7 @@ class Inventory:
 
     def remove(
         self,
-        item: FoodPortion,
+        item: ResourcePortion,
     ) -> bool:
         try:
             self._items.remove(item)
@@ -71,7 +60,7 @@ class Inventory:
 
         return True
 
-    def clear(self) -> tuple[FoodPortion, ...]:
+    def clear(self) -> tuple[ResourcePortion, ...]:
         removed_items = self.items
         self._items.clear()
         return removed_items
@@ -79,7 +68,7 @@ class Inventory:
     def count(self) -> int:
         return len(self._items)
 
-    def __iter__(self) -> Iterator[FoodPortion]:
+    def __iter__(self) -> Iterator[ResourcePortion]:
         return iter(self._items)
 
     def __len__(self) -> int:

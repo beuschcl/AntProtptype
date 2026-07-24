@@ -4,10 +4,15 @@ from typing import TypeVar
 from ant_colony.components import AntState
 from ant_colony.config import settings
 from ant_colony.entities.ant import Ant
+from ant_colony.entities.building_material import (
+    BuildingMaterial,
+)
 from ant_colony.entities.entity import Entity
 from ant_colony.entities.food import Food
 from ant_colony.entities.nest import Nest
 from ant_colony.entities.pheromone import Pheromone
+from ant_colony.entities.resource import Resource
+from ant_colony.entities.water import Water
 
 EntityType = TypeVar(
     "EntityType",
@@ -46,6 +51,26 @@ class World:
             )
         )
 
+        self.add_entity(
+            Water(
+                water_id=1,
+                x=750,
+                y=180,
+                hydration=4,
+                quantity=15,
+            )
+        )
+
+        self.add_entity(
+            BuildingMaterial(
+                material_id=1,
+                x=700,
+                y=520,
+                construction_value=3,
+                quantity=12,
+            )
+        )
+
     @property
     def entities(self) -> tuple[Entity, ...]:
         return tuple(self._entities)
@@ -58,6 +83,20 @@ class World:
     def food(self) -> tuple[Food, ...]:
         return self.entities_of_type(Food)
 
+    @property
+    def water(self) -> tuple[Water, ...]:
+        return self.entities_of_type(Water)
+
+    @property
+    def building_materials(
+        self,
+    ) -> tuple[BuildingMaterial, ...]:
+        return self.entities_of_type(BuildingMaterial)
+
+    @property
+    def resources(self) -> tuple[Resource, ...]:
+        return self.entities_of_type(Resource)
+    
     @property
     def pheromones(self) -> tuple[Pheromone, ...]:
         return self.entities_of_type(Pheromone)
@@ -101,8 +140,8 @@ class World:
         if entity is self.selected_ant:
             self.selected_ant = None
 
-        if isinstance(entity, Food):
-            self._clear_food_target_references(entity)
+        if isinstance(entity, Resource):
+            self._clear_resource_target_references(entity)
 
     def entities_of_type(
         self,
@@ -159,7 +198,7 @@ class World:
             self._deposit_food_for(ant)
 
         self._deposit_pheromones()
-        self._remove_depleted_food()
+        self._remove_depleted_resources()
         self._remove_depleted_pheromones()
         self._update_count += 1
 
@@ -248,18 +287,21 @@ class World:
         for pheromone in self.pheromones:
             if pheromone.is_depleted:
                 self.remove_entity(pheromone)
-                
-    def _remove_depleted_food(self) -> None:
-        for food in self.food:
-            if food.is_depleted:
-                self.remove_entity(food)
 
-    def _clear_food_target_references(
+    def _remove_depleted_resources(self) -> None:
+        for resource in self.resources:
+            if resource.is_depleted:
+                self.remove_entity(resource)
+
+    def _clear_resource_target_references(
         self,
-        food: Food,
+        resource: Resource,
     ) -> None:
+        if not isinstance(resource, Food):
+            return
+
         for ant in self.ants:
-            if ant.food_target is food:
+            if ant.food_target is resource:
                 ant.clear_food_target()
 
     def __iter__(self) -> Iterator[Entity]:
@@ -315,6 +357,9 @@ class World:
             f"entities={len(self._entities)}, "
             f"ants={len(self.ants)}, "
             f"food={len(self.food)}, "
+            f"water={len(self.water)}, "
+            f"building_materials="
+            f"{len(self.building_materials)}, "
             f"pheromones={len(self.pheromones)}"
             f")"
         )

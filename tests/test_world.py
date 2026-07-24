@@ -2,14 +2,19 @@ import pytest
 
 from ant_colony.components import (
     AntState,
-    FoodPortion,
+    ResourcePortion,
 )
 from ant_colony.config import settings
 from ant_colony.entities.ant import Ant
+from ant_colony.entities.building_material import (
+    BuildingMaterial,
+)
 from ant_colony.entities.entity import Entity
 from ant_colony.entities.food import Food
 from ant_colony.entities.nest import Nest
 from ant_colony.entities.pheromone import Pheromone
+from ant_colony.entities.resource import Resource
+from ant_colony.entities.water import Water
 from ant_colony.knowledge import EntityObservation
 from ant_colony.world import World
 
@@ -344,7 +349,7 @@ def test_world_assigns_nest_to_carrying_ant() -> None:
     ant = world.ants[0]
 
     ant.inventory.add(
-        FoodPortion(
+        ResourcePortion(
             source_id=1,
             nutrition=5,
         )
@@ -365,7 +370,7 @@ def test_world_deposits_food_at_nest() -> None:
     ant.y = nest.y
 
     ant.inventory.add(
-        FoodPortion(
+        ResourcePortion(
             source_id=1,
             nutrition=5,
         )
@@ -385,7 +390,7 @@ def test_world_does_not_replace_existing_nest_target() -> None:
     nest = world.nest
 
     ant.inventory.add(
-        FoodPortion(
+        ResourcePortion(
             source_id=1,
             nutrition=5,
         )
@@ -418,7 +423,7 @@ def test_world_deposits_pheromone_for_carrying_ant() -> None:
     ant.speed = 0
 
     ant.inventory.add(
-        FoodPortion(
+        ResourcePortion(
             source_id=1,
             nutrition=5,
         )
@@ -455,7 +460,7 @@ def test_world_respects_pheromone_deposit_interval() -> None:
     ant.speed = 0
 
     ant.inventory.add(
-        FoodPortion(
+        ResourcePortion(
             source_id=1,
             nutrition=5,
         )
@@ -488,3 +493,51 @@ def test_world_removes_depleted_pheromone() -> None:
 
     assert pheromone not in world.entities
     assert world.pheromones == ()
+
+def test_world_exposes_all_resource_types() -> None:
+    world = World()
+
+    assert len(world.food) == 1
+    assert len(world.water) == 1
+    assert len(world.building_materials) == 1
+
+    assert all(
+        isinstance(resource, Resource)
+        for resource in world.resources
+    )
+
+
+def test_world_removes_depleted_water() -> None:
+    world = World()
+
+    water = Water(
+        water_id=999,
+        x=100,
+        y=100,
+        hydration=3,
+        quantity=1,
+    )
+    world.add_entity(water)
+
+    water.collect()
+    world.update()
+
+    assert water not in world.entities
+
+
+def test_world_removes_depleted_building_material() -> None:
+    world = World()
+
+    material = BuildingMaterial(
+        material_id=999,
+        x=100,
+        y=100,
+        construction_value=2,
+        quantity=1,
+    )
+    world.add_entity(material)
+
+    material.collect()
+    world.update()
+
+    assert material not in world.entities

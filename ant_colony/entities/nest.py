@@ -1,6 +1,9 @@
 from collections.abc import Iterable
 
-from ant_colony.components import FoodPortion
+from ant_colony.components import (
+    ResourcePortion,
+    ResourceType,
+)
 from ant_colony.config import settings
 from ant_colony.entities.entity import Entity
 from ant_colony.graphics.primitives import Circle, Shape
@@ -12,7 +15,9 @@ class Nest(Entity):
             entity_id="nest",
             x=x,
             y=y,
-            discoverable_radius=settings.NEST_DISCOVERABLE_RADIUS,
+            discoverable_radius=(
+                settings.NEST_DISCOVERABLE_RADIUS
+            ),
         )
 
         self._food_reserve = 0
@@ -28,12 +33,24 @@ class Nest(Entity):
 
     def deposit(
         self,
-        portions: Iterable[FoodPortion],
+        portions: Iterable[ResourcePortion],
     ) -> int:
         deposited_portions = tuple(portions)
 
+        invalid_portions = tuple(
+            portion
+            for portion in deposited_portions
+            if portion.resource_type
+            != ResourceType.FOOD
+        )
+
+        if invalid_portions:
+            raise ValueError(
+                "The food reserve only accepts food portions."
+            )
+
         nutrition = sum(
-            portion.nutrition
+            portion.value
             for portion in deposited_portions
         )
 

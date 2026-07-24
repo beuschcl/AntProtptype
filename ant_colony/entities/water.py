@@ -3,29 +3,29 @@ from ant_colony.config import settings
 from ant_colony.entities.resource import Resource
 
 
-class Food(Resource):
+class Water(Resource):
     def __init__(
         self,
-        food_id: int,
+        water_id: int,
         x: float,
         y: float,
-        nutrition: int,
+        hydration: int,
         quantity: int = 1,
     ) -> None:
         super().__init__(
-            resource_id=food_id,
+            resource_id=water_id,
             x=x,
             y=y,
-            resource_type=ResourceType.FOOD,
-            value=nutrition,
+            resource_type=ResourceType.WATER,
+            value=hydration,
             quantity=quantity,
-            radius=settings.FOOD_RADIUS,
-            color=settings.FOOD_COLOR,
+            radius=settings.WATER_RADIUS,
+            color=settings.WATER_COLOR,
             discoverable_radius=(
-                settings.FOOD_DISCOVERABLE_RADIUS
+                settings.WATER_DISCOVERABLE_RADIUS
             ),
         )
 
     @property
-    def nutrition(self) -> int:
+    def hydration(self) -> int:
         return self.value

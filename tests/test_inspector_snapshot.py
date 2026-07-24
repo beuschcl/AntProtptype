@@ -1,6 +1,6 @@
 from ant_colony.components import (
     AntState,
-    FoodPortion,
+    ResourcePortion,
 )
 from ant_colony.entities.pheromone import Pheromone
 from ant_colony.ui.inspector_snapshot import (
@@ -28,11 +28,11 @@ def test_snapshot_contains_nest_delivery_totals() -> None:
 
     world.nest.deposit(
         (
-            FoodPortion(
+            ResourcePortion(
                 source_id=1,
                 nutrition=5,
             ),
-            FoodPortion(
+            ResourcePortion(
                 source_id=1,
                 nutrition=5,
             ),
@@ -90,7 +90,7 @@ def test_snapshot_identifies_nest_target() -> None:
     ant = world.ants[0]
 
     ant.inventory.add(
-        FoodPortion(
+        ResourcePortion(
             source_id=1,
             nutrition=5,
         )

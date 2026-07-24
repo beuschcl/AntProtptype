@@ -18,7 +18,7 @@ class EntityObservation:
     def from_entity(
         cls,
         entity: Entity,
-    ) -> "EntityObservation":
+    ) -> EntityObservation:
         return cls(
             entity_id=entity.id,
             entity_type=type(entity).__name__.lower(),

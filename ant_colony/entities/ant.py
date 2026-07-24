@@ -19,6 +19,7 @@ from ant_colony.knowledge import (
 
 if TYPE_CHECKING:
     from ant_colony.entities.food import Food
+    from ant_colony.entities.nest import Nest
 
 
 class Ant(Entity):
@@ -27,7 +28,6 @@ class Ant(Entity):
             0,
             settings.WORLD_WIDTH,
         )
-
         y = random.uniform(
             0,
             settings.SCREEN_HEIGHT,
@@ -46,7 +46,6 @@ class Ant(Entity):
             settings.ANT_MIN_SPEED,
             settings.ANT_MAX_SPEED,
         )
-
         self.heading = random.uniform(
             0,
             360,
@@ -58,17 +57,25 @@ class Ant(Entity):
             capacity=settings.ANT_INVENTORY_CAPACITY
         )
         self.knowledge = Knowledge()
+
         self._food_target: Food | None = None
+        self._nest_target: Nest | None = None
 
     @property
     def food_target(self) -> Food | None:
         return self._food_target
+
+    @property
+    def nest_target(self) -> Nest | None:
+        return self._nest_target
 
     def update(self) -> None:
         if self.state == AntState.WANDERING:
             self.wander()
         elif self.state == AntState.SEEKING_FOOD:
             self.move_toward_food()
+        elif self.state == AntState.CARRYING_FOOD:
+            self.move_toward_nest()
 
     def observe(
         self,
@@ -89,12 +96,14 @@ class Ant(Entity):
         self,
         food: Food,
     ) -> bool:
-        if self.inventory.is_full:
+        if self.inventory.count() > 0:
             return False
 
         if food.is_depleted:
             return False
 
+
+        self._nest_target = None
         self._food_target = food
         self.state = AntState.SEEKING_FOOD
         return True
@@ -102,26 +111,39 @@ class Ant(Entity):
     def clear_food_target(self) -> None:
         self._food_target = None
 
-        if self.inventory.is_full:
-            self.state = AntState.CARRYING_FOOD
-        else:
+        if self.inventory.is_empty:
             self.state = AntState.WANDERING
+        else:
+            self.state = AntState.CARRYING_FOOD
+
+    def select_nest_target(
+        self,
+        nest: Nest,
+    ) -> bool:
+        if self.inventory.is_empty:
+            return False
+
+        self._food_target = None
+        self._nest_target = nest
+        self.state = AntState.CARRYING_FOOD
+        return True
+
+    def clear_nest_target(self) -> None:
+        self._nest_target = None
+
+        if self.inventory.is_empty:
+            self.state = AntState.WANDERING
+        else:
+            self.state = AntState.CARRYING_FOOD
 
     def can_collect(
         self,
         food: Food,
     ) -> bool:
-        collection_distance = (
-            settings.ANT_RADIUS
-            + settings.FOOD_RADIUS
-            + settings.ANT_INTERACTION_RADIUS
-        )
-
         return (
             not self.inventory.is_full
             and not food.is_depleted
-            and self.distance_to(food)
-            <= collection_distance
+            and self.distance_to(food) <= settings.ANT_INTERACTION_RADIUS
         )
 
     def collect_from(
@@ -145,6 +167,35 @@ class Ant(Entity):
         self.clear_food_target()
         return True
 
+    def can_deposit(
+        self,
+        nest: Nest,
+    ) -> bool:
+        deposit_distance = (
+            settings.ANT_RADIUS
+            + settings.NEST_RADIUS
+            + settings.ANT_INTERACTION_RADIUS
+        )
+
+        return (
+            not self.inventory.is_empty
+            and self.distance_to(nest)
+            <= deposit_distance
+        )
+
+    def deposit_into(
+        self,
+        nest: Nest,
+    ) -> int:
+        if not self.can_deposit(nest):
+            return 0
+
+        portions = self.inventory.clear()
+        deposited_nutrition = nest.deposit(portions)
+
+        self.clear_nest_target()
+        return deposited_nutrition
+
     def move_toward_food(self) -> None:
         if (
             self._food_target is None
@@ -156,6 +207,15 @@ class Ant(Entity):
         self.move_toward(
             self._food_target.x,
             self._food_target.y,
+        )
+
+    def move_toward_nest(self) -> None:
+        if self._nest_target is None:
+            return
+
+        self.move_toward(
+            self._nest_target.x,
+            self._nest_target.y,
         )
 
     def move_toward(
@@ -207,7 +267,6 @@ class Ant(Entity):
             math.cos(heading_radians)
             * self.speed
         )
-
         self.y += (
             math.sin(heading_radians)
             * self.speed

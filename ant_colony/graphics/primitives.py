@@ -1,9 +1,7 @@
-#ant_colony/graphics/primitives.py
 from dataclasses import dataclass
-from typing import TypeAlias
 
-Color: TypeAlias = tuple[int, int, int]
-Point: TypeAlias = tuple[float, float]
+type Color = tuple[int, int, int]
+type Point = tuple[float, float]
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,4 +20,4 @@ class Polygon:
     width: int = 0
 
 
-Shape: TypeAlias = Circle | Polygon
+type Shape = Circle | Polygon

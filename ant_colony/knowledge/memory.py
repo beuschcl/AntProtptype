@@ -1,7 +1,6 @@
 from dataclasses import dataclass
-from typing import TypeAlias
 
-MemoryValue: TypeAlias = object
+type MemoryValue = object
 
 
 @dataclass(frozen=True, slots=True)

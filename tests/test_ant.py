@@ -1,7 +1,11 @@
-from ant_colony.components import AntState
+from ant_colony.components import (
+    AntState,
+    FoodPortion,
+)
 from ant_colony.config import settings
 from ant_colony.entities.ant import Ant
 from ant_colony.entities.food import Food
+from ant_colony.entities.nest import Nest
 from ant_colony.graphics.primitives import Polygon
 from ant_colony.knowledge import EntityObservation
 
@@ -185,3 +189,97 @@ def test_ant_with_full_inventory_rejects_target() -> None:
 
     assert not selected
     assert ant.food_target is None
+
+def test_ant_can_select_nest_when_carrying_food() -> None:
+    ant = Ant(ant_id=1)
+    nest = Nest(x=100, y=100)
+
+    ant.inventory.add(
+        FoodPortion(
+            source_id=1,
+            nutrition=5,
+        )
+    )
+
+    selected = ant.select_nest_target(nest)
+
+    assert selected is True
+    assert ant.nest_target is nest
+    assert ant.state == AntState.CARRYING_FOOD
+
+
+def test_ant_cannot_select_nest_with_empty_inventory() -> None:
+    ant = Ant(ant_id=1)
+    nest = Nest(x=100, y=100)
+
+    selected = ant.select_nest_target(nest)
+
+    assert selected is False
+    assert ant.nest_target is None
+
+
+def test_ant_moves_toward_nest() -> None:
+    ant = Ant(ant_id=1)
+    nest = Nest(x=110, y=100)
+
+    ant.x = 100
+    ant.y = 100
+    ant.speed = 2
+
+    ant.inventory.add(
+        FoodPortion(
+            source_id=1,
+            nutrition=5,
+        )
+    )
+    ant.select_nest_target(nest)
+
+    ant.update()
+
+    assert ant.x == 102
+    assert ant.y == 100
+
+
+def test_ant_deposits_inventory_into_nest() -> None:
+    ant = Ant(ant_id=1)
+    nest = Nest(x=100, y=100)
+
+    ant.x = 100
+    ant.y = 100
+
+    ant.inventory.add(
+        FoodPortion(
+            source_id=1,
+            nutrition=5,
+        )
+    )
+    ant.select_nest_target(nest)
+
+    deposited_nutrition = ant.deposit_into(nest)
+
+    assert deposited_nutrition == 5
+    assert ant.inventory.is_empty
+    assert nest.food_reserve == 5
+    assert ant.nest_target is None
+    assert ant.state == AntState.WANDERING
+
+
+def test_ant_cannot_deposit_when_too_far_from_nest() -> None:
+    ant = Ant(ant_id=1)
+    nest = Nest(x=500, y=500)
+
+    ant.x = 100
+    ant.y = 100
+
+    portion = FoodPortion(
+        source_id=1,
+        nutrition=5,
+    )
+    ant.inventory.add(portion)
+    ant.select_nest_target(nest)
+
+    deposited_nutrition = ant.deposit_into(nest)
+
+    assert deposited_nutrition == 0
+    assert ant.inventory.items == (portion,)
+    assert nest.food_reserve == 0

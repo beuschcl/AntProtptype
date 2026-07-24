@@ -1,11 +1,17 @@
 import pytest
 
-from ant_colony.components import AntState
+from ant_colony.components import (
+    AntState,
+    FoodPortion,
+)
 from ant_colony.config import settings
 from ant_colony.entities.ant import Ant
+from ant_colony.entities.entity import Entity
 from ant_colony.entities.food import Food
+from ant_colony.entities.nest import Nest
 from ant_colony.knowledge import EntityObservation
 from ant_colony.world import World
+
 
 def test_world_creates_configured_number_of_ants() -> None:
     world = World()
@@ -331,3 +337,60 @@ def test_full_ant_does_not_select_more_food() -> None:
     assert ant.food_target is None
     assert ant.state == AntState.CARRYING_FOOD
     assert second_food.quantity == 1
+
+def test_world_assigns_nest_to_carrying_ant() -> None:
+    world = World()
+    ant = world.ants[0]
+
+    ant.inventory.add(
+        FoodPortion(
+            source_id=1,
+            nutrition=5,
+        )
+    )
+    ant.state = AntState.CARRYING_FOOD
+
+    world._assign_nest_target(ant)
+
+    assert ant.nest_target is world.nest
+
+
+def test_world_deposits_food_at_nest() -> None:
+    world = World()
+    ant = world.ants[0]
+    nest = world.nest
+
+    ant.x = nest.x
+    ant.y = nest.y
+
+    ant.inventory.add(
+        FoodPortion(
+            source_id=1,
+            nutrition=5,
+        )
+    )
+    ant.select_nest_target(nest)
+
+    world._deposit_food_for(ant)
+
+    assert ant.inventory.is_empty
+    assert nest.food_reserve == 5
+    assert ant.state == AntState.WANDERING
+
+
+def test_world_does_not_replace_existing_nest_target() -> None:
+    world = World()
+    ant = world.ants[0]
+    nest = world.nest
+
+    ant.inventory.add(
+        FoodPortion(
+            source_id=1,
+            nutrition=5,
+        )
+    )
+    ant.select_nest_target(nest)
+
+    world._assign_nest_target(ant)
+
+    assert ant.nest_target is nest

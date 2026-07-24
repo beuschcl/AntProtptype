@@ -134,20 +134,22 @@ class World:
 
     def update(self) -> None:
         for ant in self.ants:
-            discovered_entities = self.sense_for(
-                ant
-            )
+            discovered_entities = self.sense_for(ant)
 
             self._assign_food_target(
                 ant,
                 discovered_entities,
             )
 
+            self._assign_nest_target(ant)
+
         for entity in tuple(self._entities):
             entity.update()
 
         for ant in self.ants:
             self._collect_food_for(ant)
+            self._assign_nest_target(ant)
+            self._deposit_food_for(ant)
 
         self._remove_depleted_food()
 
@@ -176,6 +178,30 @@ class World:
 
         ant.select_food_target(closest_food)
 
+    def _assign_nest_target(
+        self,
+        ant: Ant,
+    ) -> None:
+        if ant.state != AntState.CARRYING_FOOD:
+            return
+
+        if ant.inventory.is_empty:
+            return
+
+        if ant.nest_target is not None:
+            return
+
+        ant.select_nest_target(self.nest)
+
+    def _deposit_food_for(
+        self,
+        ant: Ant,
+    ) -> None:
+        if ant.nest_target is None:
+            return
+
+        ant.deposit_into(self.nest)
+    
     def _collect_food_for(
         self,
         ant: Ant,

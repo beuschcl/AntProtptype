@@ -1,66 +1,96 @@
 import pygame
 
 from ant_colony.config import settings
+from ant_colony.entities.entity import Entity
+from ant_colony.graphics.camera import Camera
+from ant_colony.graphics.primitives import Circle, Polygon, Shape
+from ant_colony.world import World
 
 
 class Renderer:
-
-    def __init__(self, screen):
-
+    def __init__(
+        self,
+        screen: pygame.Surface,
+        camera: Camera,
+    ) -> None:
         self.screen = screen
+        self.camera = camera
 
-    def draw(self, world):
+    def draw(self, world: World) -> None:
+        self.screen.fill(settings.BACKGROUND_COLOR)
 
-        self.screen.fill(
-            settings.BACKGROUND_COLOR
+        self._draw_entity(world.nest)
+
+        for food in world.food:
+            self._draw_entity(food)
+
+        for ant in world.ants:
+            self._draw_entity(ant)
+
+        if world.selected_ant is not None:
+            self._draw_selection_ring(world.selected_ant)
+
+        self._draw_inspector_divider()
+
+    def _draw_entity(self, entity: Entity) -> None:
+        for shape in entity.shapes():
+            self._draw_shape(shape)
+
+    def _draw_shape(self, shape: Shape) -> None:
+        match shape:
+            case Circle():
+                self._draw_circle(shape)
+
+            case Polygon():
+                self._draw_polygon(shape)
+
+    def _draw_circle(self, circle: Circle) -> None:
+        center = self.camera.world_to_screen(
+            circle.x,
+            circle.y,
         )
 
-        self.draw_nest(world)
-        self.draw_food(world)
-        self.draw_ants(world)
-
-        pygame.display.flip()
-
-    def draw_nest(self, world):
+        radius = self.camera.scale_length(circle.radius)
 
         pygame.draw.circle(
             self.screen,
-            (150, 75, 0),
-            (
-                int(world.nest.x),
-                int(world.nest.y),
-            ),
-            20,
+            circle.color,
+            center,
+            radius,
+            circle.width,
         )
 
-    def draw_food(self, world):
+    def _draw_polygon(self, polygon: Polygon) -> None:
+        points = [
+            self.camera.world_to_screen(x, y)
+            for x, y in polygon.points
+        ]
 
-        for food in world.food:
+        pygame.draw.polygon(
+            self.screen,
+            polygon.color,
+            points,
+            polygon.width,
+        )
 
-            pygame.draw.circle(
-                self.screen,
-                (0, 100, 255),
-                (
-                    int(food.x),
-                    int(food.y),
-                ),
-                settings.FOOD_RADIUS,
-            )
+    def _draw_selection_ring(self, entity: Entity) -> None:
+        selection_ring = Circle(
+            x=entity.x,
+            y=entity.y,
+            radius=(
+                settings.ANT_RADIUS
+                + settings.SELECTION_RING_PADDING
+            ),
+            color=settings.SELECTION_COLOR,
+            width=settings.SELECTION_RING_WIDTH,
+        )
 
-    def draw_ants(self, world):
+        self._draw_circle(selection_ring)
 
-        for ant in world.ants:
-
-            ant.draw(self.screen)
-
-            if ant is world.selected_ant:
-                pygame.draw.circle(
-                    self.screen,
-                    (255, 255, 0),
-                    (
-                        int(ant.x),
-                        int(ant.y),
-                    ),
-                    settings.ANT_RADIUS + 6,
-                    2,
-                )
+    def _draw_inspector_divider(self) -> None:
+        pygame.draw.line(
+            self.screen,
+            settings.INSPECTOR_DIVIDER_COLOR,
+            (settings.WORLD_WIDTH, 0),
+            (settings.WORLD_WIDTH, settings.SCREEN_HEIGHT),
+        )

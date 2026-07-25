@@ -1,0 +1,47 @@
+# Example scenario for the ant-colony simulation.
+# Run the vertical slice with:
+#   python -m ant_colony
+
+name = "Small Valley"
+
+[world]
+width  = 12
+height = 10
+
+# Wall terrain (impassable cells)
+# A rock ridge running down the centre
+walls = [
+    [5, 0], [5, 1], [5, 2], [5, 3],
+    [5, 6], [5, 7], [5, 8], [5, 9],
+]
+
+# Solid obstacles (boulders)
+[[world.obstacles]]
+x = 2
+y = 2
+
+[[world.obstacles]]
+x = 9
+y = 7
+
+# Resource deposits (food piles)
+[[world.resources]]
+x = 8
+y = 2
+amount     = 50
+max_amount = 50
+
+[[world.resources]]
+x = 3
+y = 7
+amount     = 30
+max_amount = 30
+
+# Colony nest
+[world.nest]
+x = 1
+y = 5
+
+[simulation]
+seed  = 42
+ticks = 5

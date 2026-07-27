@@ -1,4 +1,4 @@
-# config/settings.py
+#config/settings.py
 SCREEN_HEIGHT = 700
 
 WORLD_WIDTH = 1000

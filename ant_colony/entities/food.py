@@ -1,6 +1,7 @@
 from ant_colony.components import ResourceType
 from ant_colony.config import settings
 from ant_colony.entities.resource import Resource
+from ant_colony.graphics.primitives import Polygon, Shape
 
 
 class Food(Resource):
@@ -29,3 +30,21 @@ class Food(Resource):
     @property
     def nutrition(self) -> int:
         return self.value
+
+    def shapes(self) -> tuple[Shape, ...]:
+        if self.is_depleted:
+            return ()
+
+        radius = settings.FOOD_RADIUS
+
+        return (
+            Polygon(
+                points=(
+                    (self.x, self.y - radius),
+                    (self.x + radius, self.y),
+                    (self.x, self.y + radius),
+                    (self.x - radius, self.y),
+                ),
+                color=settings.FOOD_COLOR,
+            ),
+        )

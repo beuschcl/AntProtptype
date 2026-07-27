@@ -4,7 +4,9 @@ from ant_colony.components import (
     ResourcePortion,
     ResourceType,
 )
+from ant_colony.config import settings
 from ant_colony.entities.nest import Nest
+from ant_colony.graphics.primitives import Polygon
 
 
 def test_nest_starts_with_empty_food_reserve() -> None:
@@ -12,6 +14,14 @@ def test_nest_starts_with_empty_food_reserve() -> None:
 
     assert nest.food_reserve == 0
     assert nest.delivered_portions == 0
+    shape = nest.shapes()[0]
+
+    assert isinstance(shape, Polygon)
+    assert shape.width == 3
+    assert len(shape.points) == 6
+    assert shape.points[0] == pytest.approx(
+        (100 + settings.NEST_RADIUS, 100)
+    )
 
 
 def test_nest_deposits_food_portions() -> None:

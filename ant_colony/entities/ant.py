@@ -69,6 +69,10 @@ class Ant(Entity):
     def nest_target(self) -> Nest | None:
         return self._nest_target
 
+    @property
+    def hitbox_radius(self) -> float:
+        return settings.ANT_RADIUS
+
     def update(self) -> None:
         if self.state == AntState.WANDERING:
             self.wander()

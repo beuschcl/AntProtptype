@@ -36,6 +36,7 @@ def test_world_has_one_nest() -> None:
     world = World()
 
     assert isinstance(world.nest, Nest)
+    assert (world.nest.x, world.nest.y) == settings.NEST_POSITION
 
 
 def test_entities_contains_every_world_entity() -> None:
@@ -183,6 +184,25 @@ def test_click_near_ant_selects_ant() -> None:
     world.handle_click((100, 100))
 
     assert world.selected_ant is ant
+
+
+def test_world_has_water_at_configured_position() -> None:
+    world = World()
+
+    water = world.water[0]
+
+    assert (water.x, water.y) == settings.WATER_POSITION
+
+
+def test_world_finds_entity_under_position() -> None:
+    world = World()
+    ant = world.ants[0]
+    ant.x = 120
+    ant.y = 140
+
+    hovered = world.entity_under_position((120, 140))
+
+    assert hovered is ant
 
 def test_world_coordinates_ant_sensing() -> None:
     world = World()

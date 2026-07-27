@@ -37,6 +37,8 @@ def main() -> None:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
+                elif event.type == pygame.KEYDOWN:
+                    renderer.handle_event(event)
 
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     world_position = (

@@ -1,3 +1,4 @@
+import math
 from collections.abc import Iterable
 
 from ant_colony.components import (
@@ -6,7 +7,7 @@ from ant_colony.components import (
 )
 from ant_colony.config import settings
 from ant_colony.entities.entity import Entity
-from ant_colony.graphics.primitives import Circle, Shape
+from ant_colony.graphics.primitives import Polygon, Shape
 
 
 class Nest(Entity):
@@ -61,12 +62,27 @@ class Nest(Entity):
 
         return nutrition
 
+    @property
+    def hitbox_radius(self) -> float:
+        return settings.NEST_RADIUS
+
     def shapes(self) -> tuple[Shape, ...]:
+        points = tuple(
+            (
+                self.x
+                + math.cos(math.radians(angle))
+                * settings.NEST_RADIUS,
+                self.y
+                + math.sin(math.radians(angle))
+                * settings.NEST_RADIUS,
+            )
+            for angle in range(0, 360, 60)
+        )
+
         return (
-            Circle(
-                x=self.x,
-                y=self.y,
-                radius=settings.NEST_RADIUS,
+            Polygon(
+                points=points,
                 color=settings.NEST_COLOR,
+                width=3,
             ),
         )

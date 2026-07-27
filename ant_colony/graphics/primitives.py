@@ -14,10 +14,20 @@ class Circle:
 
 
 @dataclass(frozen=True, slots=True)
+class Ellipse:
+    x: float
+    y: float
+    radius_x: float
+    radius_y: float
+    color: Color
+    width: int = 0
+
+
+@dataclass(frozen=True, slots=True)
 class Polygon:
     points: tuple[Point, ...]
     color: Color
     width: int = 0
 
 
-type Shape = Circle | Polygon
+type Shape = Circle | Ellipse | Polygon

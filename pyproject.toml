@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ant-colony"
+version = "0.1.0"
+description = "An object-oriented ant colony simulation built with Python and Pygame."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pygame>=2.6,<3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8,<10",
+    "ruff>=0.12,<1",
+]
+
+[project.scripts]
+ant-colony = "ant_colony.main:main"
+
+[tool.setuptools.packages.find]
+include = ["ant_colony*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "I",
+    "UP",
+    "B",
+]

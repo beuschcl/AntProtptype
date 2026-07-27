@@ -35,6 +35,10 @@ class Pheromone(Entity):
     def is_depleted(self) -> bool:
         return self._strength <= 0
 
+    @property
+    def hitbox_radius(self) -> float:
+        return settings.PHEROMONE_RADIUS * self._strength
+
     def update(self) -> None:
         self._strength = max(
             0,

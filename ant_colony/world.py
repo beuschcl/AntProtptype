@@ -35,8 +35,8 @@ class World:
 
         self.add_entity(
             Nest(
-                x=settings.WORLD_WIDTH / 2,
-                y=settings.SCREEN_HEIGHT / 2,
+                x=settings.NEST_POSITION[0],
+                y=settings.NEST_POSITION[1],
             )
         )
 
@@ -53,8 +53,8 @@ class World:
         self.add_entity(
             Water(
                 water_id=1,
-                x=750,
-                y=180,
+                x=settings.WATER_POSITION[0],
+                y=settings.WATER_POSITION[1],
                 hydration=4,
                 quantity=15,
             )
@@ -360,6 +360,32 @@ class World:
                 closest_distance = distance
 
         self.selected_ant = closest_ant
+
+    def entity_under_position(
+        self,
+        position: tuple[float, float],
+    ) -> Entity | None:
+        x, y = position
+
+        if not self._is_inside_world(x, y):
+            return None
+
+        matching_entities = tuple(
+            entity
+            for entity in self._entities
+            if entity.intersects_position(x, y)
+        )
+
+        if not matching_entities:
+            return None
+
+        return min(
+            matching_entities,
+            key=lambda entity: entity.distance_to_position(
+                x,
+                y,
+            ),
+        )
 
     @staticmethod
     def _is_inside_world(

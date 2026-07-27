@@ -65,6 +65,10 @@ class Resource(Entity):
     def is_depleted(self) -> bool:
         return self._quantity == 0
 
+    @property
+    def hitbox_radius(self) -> float:
+        return self._radius
+
     def collect(self) -> ResourcePortion | None:
         if self.is_depleted:
             return None

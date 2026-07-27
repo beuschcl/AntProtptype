@@ -36,6 +36,7 @@ def test_world_has_one_nest() -> None:
     world = World()
 
     assert isinstance(world.nest, Nest)
+    assert (world.nest.x, world.nest.y) == settings.NEST_POSITION
 
 
 def test_entities_contains_every_world_entity() -> None:
@@ -184,6 +185,25 @@ def test_click_near_ant_selects_ant() -> None:
 
     assert world.selected_ant is ant
 
+
+def test_world_has_water_at_configured_position() -> None:
+    world = World()
+
+    water = world.water[0]
+
+    assert (water.x, water.y) == settings.WATER_POSITION
+
+
+def test_world_finds_entity_under_position() -> None:
+    world = World()
+    ant = world.ants[0]
+    ant.x = 120
+    ant.y = 140
+
+    hovered = world.entity_under_position((120, 140))
+
+    assert hovered is ant
+
 def test_world_coordinates_ant_sensing() -> None:
     world = World()
     ant = world.ants[0]
@@ -252,14 +272,19 @@ def test_world_rejects_sensing_for_unregistered_ant() -> None:
 def test_world_assigns_closest_discovered_food() -> None:
     world = World()
     ant = world.ants[0]
+    collect_boundary = (
+        ant.hitbox_radius
+        + settings.FOOD_RADIUS
+        + settings.ANT_INTERACTION_RADIUS
+    )
 
     existing_food = world.food[0]
-    existing_food.x = 120
+    existing_food.x = 100 + collect_boundary + 8
     existing_food.y = 100
 
     farther_food = Food(
         food_id=9998,
-        x=130,
+        x=100 + collect_boundary + 18,
         y=100,
         nutrition=5,
     )
@@ -279,6 +304,10 @@ def test_world_collects_food_for_ant() -> None:
     world = World()
     ant = world.ants[0]
     food = world.food[0]
+    for other_ant in world.ants[1:]:
+        other_ant.x = 0
+        other_ant.y = 0
+        other_ant.speed = 0
 
     ant.x = food.x
     ant.y = food.y
@@ -423,6 +452,13 @@ def test_world_exposes_pheromones() -> None:
 def test_world_deposits_pheromone_for_carrying_ant() -> None:
     world = World()
     ant = world.ants[0]
+    for other_ant in world.ants[1:]:
+        other_ant.x = 0
+        other_ant.y = 0
+        other_ant.speed = 0
+    for food in world.food:
+        food.x = settings.WORLD_WIDTH
+        food.y = settings.WORLD_HEIGHT
 
     ant.x = 100
     ant.y = 200
@@ -449,8 +485,13 @@ def test_world_deposits_pheromone_for_carrying_ant() -> None:
 
 def test_world_does_not_deposit_for_wandering_ant() -> None:
     world = World()
+    for food in world.food:
+        food.x = settings.WORLD_WIDTH
+        food.y = settings.WORLD_HEIGHT
 
     for ant in world.ants:
+        ant.x = 0
+        ant.y = 0
         ant.speed = 0
 
     world.update()
@@ -461,6 +502,13 @@ def test_world_does_not_deposit_for_wandering_ant() -> None:
 def test_world_respects_pheromone_deposit_interval() -> None:
     world = World()
     ant = world.ants[0]
+    for other_ant in world.ants[1:]:
+        other_ant.x = 0
+        other_ant.y = 0
+        other_ant.speed = 0
+    for food in world.food:
+        food.x = settings.WORLD_WIDTH
+        food.y = settings.WORLD_HEIGHT
 
     ant.x = 100
     ant.y = 200
@@ -486,6 +534,13 @@ def test_world_respects_pheromone_deposit_interval() -> None:
 
 def test_world_removes_depleted_pheromone() -> None:
     world = World()
+    for food in world.food:
+        food.x = settings.WORLD_WIDTH
+        food.y = settings.WORLD_HEIGHT
+    for ant in world.ants:
+        ant.x = 0
+        ant.y = 0
+        ant.speed = 0
 
     pheromone = Pheromone(
         pheromone_id=1,

@@ -170,6 +170,28 @@ def test_ant_cannot_collect_distant_food() -> None:
     assert not food.is_depleted
 
 
+def test_ant_collect_hitbox_boundary_conditions() -> None:
+    ant = Ant(ant_id=1)
+    food = make_food(x=0, y=0, quantity=3)
+    ant.x = 0
+    ant.y = 0
+
+    boundary = (
+        ant.hitbox_radius
+        + food.hitbox_radius
+        + settings.ANT_INTERACTION_RADIUS
+    )
+
+    food.x = boundary - 0.01
+    assert ant.can_collect(food)
+
+    food.x = boundary
+    assert ant.can_collect(food)
+
+    food.x = boundary + 0.01
+    assert not ant.can_collect(food)
+
+
 def test_ant_with_full_inventory_rejects_target() -> None:
     ant = Ant(ant_id=1)
     first_food = make_food()

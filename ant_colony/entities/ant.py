@@ -69,6 +69,10 @@ class Ant(Entity):
     def nest_target(self) -> Nest | None:
         return self._nest_target
 
+    @property
+    def hitbox_radius(self) -> float:
+        return settings.ANT_RADIUS
+
     def update(self) -> None:
         if self.state == AntState.WANDERING:
             self.wander()
@@ -143,7 +147,10 @@ class Ant(Entity):
         return (
             not self.inventory.is_full
             and not food.is_depleted
-            and self.distance_to(food) <= settings.ANT_INTERACTION_RADIUS
+            and self.intersects_entity(
+                food,
+                padding=settings.ANT_INTERACTION_RADIUS,
+            )
         )
 
     def collect_from(
@@ -171,16 +178,12 @@ class Ant(Entity):
         self,
         nest: Nest,
     ) -> bool:
-        deposit_distance = (
-            settings.ANT_RADIUS
-            + settings.NEST_RADIUS
-            + settings.ANT_INTERACTION_RADIUS
-        )
-
         return (
             not self.inventory.is_empty
-            and self.distance_to(nest)
-            <= deposit_distance
+            and self.intersects_entity(
+                nest,
+                padding=settings.ANT_INTERACTION_RADIUS,
+            )
         )
 
     def deposit_into(

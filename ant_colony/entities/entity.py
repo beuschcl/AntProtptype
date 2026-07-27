@@ -39,3 +39,31 @@ class Entity:
 
     def shapes(self) -> tuple[Shape, ...]:
         return ()
+
+    @property
+    def hitbox_radius(self) -> float:
+        return 0.0
+
+    def intersects_position(
+        self,
+        x: float,
+        y: float,
+        *,
+        padding: float = 0.0,
+    ) -> bool:
+        return (
+            self.distance_to_position(x, y)
+            <= self.hitbox_radius + padding
+        )
+
+    def intersects_entity(
+        self,
+        other: Entity,
+        *,
+        padding: float = 0.0,
+    ) -> bool:
+        return self.distance_to(other) <= (
+            self.hitbox_radius
+            + other.hitbox_radius
+            + padding
+        )

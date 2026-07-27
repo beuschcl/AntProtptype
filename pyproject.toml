@@ -24,6 +24,9 @@ ant-colony = "ant_colony.main:main"
 [tool.setuptools.packages.find]
 include = ["ant_colony*"]
 
+[tool.setuptools.package-data]
+ant_colony = ["assets/backgrounds/*.png"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]

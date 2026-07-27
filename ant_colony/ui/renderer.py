@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pygame
 
 from ant_colony.config import settings
@@ -15,9 +17,11 @@ class Renderer:
     ) -> None:
         self.screen = screen
         self.camera = camera
+        self.world_background = self._load_world_background()
 
     def draw(self, world: World) -> None:
         self.screen.fill(settings.BACKGROUND_COLOR)
+        self.screen.blit(self.world_background, (0, 0))
 
         for entity in world.entities:
             self._draw_entity(entity)
@@ -88,4 +92,22 @@ class Renderer:
             settings.INSPECTOR_DIVIDER_COLOR,
             (settings.WORLD_WIDTH, 0),
             (settings.WORLD_WIDTH, settings.SCREEN_HEIGHT),
+        )
+
+    @staticmethod
+    def _load_world_background() -> pygame.Surface:
+        background_path = (
+            Path(__file__).resolve().parent.parent
+            / "assets"
+            / "backgrounds"
+            / "old-growth-forest-map.png"
+        )
+        background = pygame.image.load(str(background_path))
+
+        return pygame.transform.scale(
+            background,
+            (
+                settings.WORLD_WIDTH,
+                settings.SCREEN_HEIGHT,
+            ),
         )

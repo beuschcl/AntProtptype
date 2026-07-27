@@ -1,3 +1,4 @@
+import random as _random_module
 from collections.abc import Iterator
 from typing import TypeVar
 
@@ -21,11 +22,16 @@ EntityType = TypeVar(
 
 
 class World:
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        rng: _random_module.Random | None = None,
+    ) -> None:
         self._entities: list[Entity] = []
         self.selected_ant: Ant | None = None
         self._next_pheromone_id = 1
+        self._next_food_id = 1
         self._update_count = 0
+        self._rng = rng if rng is not None else _random_module.Random()
 
         self.add_entity(
             Nest(
@@ -41,15 +47,8 @@ class World:
                 Ant(ant_id)
             )
 
-        self.add_entity(
-            Food(
-                food_id=1,
-                x=200,
-                y=200,
-                nutrition=5,
-                quantity=10,
-            )
-        )
+        for _ in range(settings.STARTING_FOOD_SOURCES):
+            self.add_entity(self._spawn_food())
 
         self.add_entity(
             Water(
@@ -283,6 +282,27 @@ class World:
 
             self._next_pheromone_id += 1
 
+    def _spawn_food(self) -> Food:
+        food_id = self._next_food_id
+        self._next_food_id += 1
+
+        x = self._rng.uniform(
+            settings.FOOD_RADIUS,
+            settings.WORLD_WIDTH - settings.FOOD_RADIUS,
+        )
+        y = self._rng.uniform(
+            settings.FOOD_RADIUS,
+            settings.SCREEN_HEIGHT - settings.FOOD_RADIUS,
+        )
+
+        return Food(
+            food_id=food_id,
+            x=x,
+            y=y,
+            nutrition=5,
+            quantity=10,
+        )
+
     def _remove_depleted_pheromones(self) -> None:
         for pheromone in self.pheromones:
             if pheromone.is_depleted:
@@ -292,6 +312,8 @@ class World:
         for resource in self.resources:
             if resource.is_depleted:
                 self.remove_entity(resource)
+                if isinstance(resource, Food):
+                    self.add_entity(self._spawn_food())
 
     def _clear_resource_target_references(
         self,

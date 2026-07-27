@@ -29,7 +29,7 @@ def test_world_creates_configured_number_of_ants() -> None:
 def test_world_contains_initial_food() -> None:
     world = World()
 
-    assert len(world.food) == 1
+    assert len(world.food) == settings.STARTING_FOOD_SOURCES
 
 
 def test_world_has_one_nest() -> None:
@@ -258,7 +258,7 @@ def test_world_assigns_closest_discovered_food() -> None:
     existing_food.y = 100
 
     farther_food = Food(
-        food_id=2,
+        food_id=9998,
         x=130,
         y=100,
         nutrition=5,
@@ -334,7 +334,7 @@ def test_full_ant_does_not_select_more_food() -> None:
     world.update()
 
     second_food = Food(
-        food_id=2,
+        food_id=9999,
         x=ant.x,
         y=ant.y,
         nutrition=5,
@@ -505,7 +505,7 @@ def test_world_removes_depleted_pheromone() -> None:
 def test_world_exposes_all_resource_types() -> None:
     world = World()
 
-    assert len(world.food) == 1
+    assert len(world.food) == settings.STARTING_FOOD_SOURCES
     assert len(world.water) == 1
     assert len(world.building_materials) == 1
 

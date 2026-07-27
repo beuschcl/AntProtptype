@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -29,17 +30,44 @@ def test_renderer_loads_and_scales_world_background_once(
         calls["size"] = size
         return scaled_surface
 
+    class FakeResource:
+        def __init__(self) -> None:
+            self.joinpath_argument = ""
+
+        def joinpath(self, value: str) -> object:
+            self.joinpath_argument = value
+            return object()
+
+    fake_resource = FakeResource()
+
+    def fake_files(package: str) -> FakeResource:
+        calls["package"] = package
+        return fake_resource
+
+    @contextmanager
+    def fake_as_file(_: object):
+        yield Path("/tmp/old-growth-forest-map.png")
+
     monkeypatch.setattr(pygame.image, "load", fake_load)
     monkeypatch.setattr(pygame.transform, "scale", fake_scale)
+    monkeypatch.setattr(renderer_module, "files", fake_files)
+    monkeypatch.setattr(
+        renderer_module,
+        "as_file",
+        fake_as_file,
+    )
 
     screen = pygame.Surface(
         (settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT)
     )
     renderer = renderer_module.Renderer(screen, Camera())
 
-    assert Path(calls["path"]).name == Path(
-        renderer_module.WORLD_BACKGROUND_ASSET
-    ).name
+    assert calls["package"] == "ant_colony"
+    assert (
+        fake_resource.joinpath_argument
+        == renderer_module.WORLD_BACKGROUND_ASSET
+    )
+    assert Path(calls["path"]).name == "old-growth-forest-map.png"
     assert Path(calls["path"]).is_absolute()
     assert calls["surface"] is loaded_surface
     assert calls["size"] == (

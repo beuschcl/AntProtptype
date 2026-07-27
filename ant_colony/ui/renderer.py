@@ -136,10 +136,11 @@ class Renderer:
             fallback.fill(settings.BACKGROUND_COLOR)
             return fallback
 
-        return pygame.transform.scale(
-            background,
-            (
-                settings.WORLD_WIDTH,
-                settings.SCREEN_HEIGHT,
-            ),
+        target_size = (
+            settings.WORLD_WIDTH,
+            settings.SCREEN_HEIGHT,
         )
+        if background.get_size() == target_size:
+            return background
+
+        return pygame.transform.scale(background, target_size)

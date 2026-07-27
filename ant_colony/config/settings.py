@@ -1,4 +1,4 @@
-#config/settings.py
+# config/settings.py
 SCREEN_HEIGHT = 700
 
 WORLD_WIDTH = 1000
@@ -26,6 +26,7 @@ SELECTION_RING_WIDTH = 2
 
 # Colony
 STARTING_ANTS = 50
+STARTING_FOOD_SOURCES = 6
 
 # Ant
 ANT_RADIUS = 10

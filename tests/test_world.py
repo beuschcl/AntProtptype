@@ -29,7 +29,7 @@ def test_world_creates_configured_number_of_ants() -> None:
 def test_world_contains_initial_food() -> None:
     world = World()
 
-    assert len(world.food) == 1
+    assert len(world.food) == settings.STARTING_FOOD_SOURCES
 
 
 def test_world_has_one_nest() -> None:
@@ -184,6 +184,7 @@ def test_click_near_ant_selects_ant() -> None:
 
     assert world.selected_ant is ant
 
+
 def test_world_coordinates_ant_sensing() -> None:
     world = World()
     ant = world.ants[0]
@@ -198,9 +199,7 @@ def test_world_coordinates_ant_sensing() -> None:
 
     assert food in discovered
 
-    observation = ant.knowledge.recall(
-        f"entity:food:{food.id}"
-    )
+    observation = ant.knowledge.recall(f"entity:food:{food.id}")
 
     assert isinstance(
         observation,
@@ -225,9 +224,7 @@ def test_world_sensing_excludes_distant_entity() -> None:
     discovered = world.sense_for(ant)
 
     assert food not in discovered
-    assert not ant.knowledge.knows(
-        f"entity:food:{food.id}"
-    )
+    assert not ant.knowledge.knows(f"entity:food:{food.id}")
 
 
 def test_world_sensing_excludes_ant_itself() -> None:
@@ -249,6 +246,7 @@ def test_world_rejects_sensing_for_unregistered_ant() -> None:
     ):
         world.sense_for(unknown_ant)
 
+
 def test_world_assigns_closest_discovered_food() -> None:
     world = World()
     ant = world.ants[0]
@@ -258,7 +256,7 @@ def test_world_assigns_closest_discovered_food() -> None:
     existing_food.y = 100
 
     farther_food = Food(
-        food_id=2,
+        food_id=9998,
         x=130,
         y=100,
         nutrition=5,
@@ -334,7 +332,7 @@ def test_full_ant_does_not_select_more_food() -> None:
     world.update()
 
     second_food = Food(
-        food_id=2,
+        food_id=9999,
         x=ant.x,
         y=ant.y,
         nutrition=5,
@@ -346,6 +344,7 @@ def test_full_ant_does_not_select_more_food() -> None:
     assert ant.food_target is None
     assert ant.state == AntState.CARRYING_FOOD
     assert second_food.quantity == 1
+
 
 def test_world_assigns_nest_to_carrying_ant() -> None:
     world = World()
@@ -406,6 +405,7 @@ def test_world_does_not_replace_existing_nest_target() -> None:
     world._assign_nest_target(ant)
 
     assert ant.nest_target is nest
+
 
 def test_world_exposes_pheromones() -> None:
     world = World()
@@ -491,9 +491,7 @@ def test_world_removes_depleted_pheromone() -> None:
         pheromone_id=1,
         x=100,
         y=100,
-        strength=(
-            settings.PHEROMONE_EVAPORATION_RATE / 2
-        ),
+        strength=(settings.PHEROMONE_EVAPORATION_RATE / 2),
     )
     world.add_entity(pheromone)
 
@@ -502,17 +500,15 @@ def test_world_removes_depleted_pheromone() -> None:
     assert pheromone not in world.entities
     assert world.pheromones == ()
 
+
 def test_world_exposes_all_resource_types() -> None:
     world = World()
 
-    assert len(world.food) == 1
+    assert len(world.food) == settings.STARTING_FOOD_SOURCES
     assert len(world.water) == 1
     assert len(world.building_materials) == 1
 
-    assert all(
-        isinstance(resource, Resource)
-        for resource in world.resources
-    )
+    assert all(isinstance(resource, Resource) for resource in world.resources)
 
 
 def test_world_removes_depleted_water() -> None:

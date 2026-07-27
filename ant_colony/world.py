@@ -1,3 +1,4 @@
+import random as _random_module
 from collections.abc import Iterator
 from typing import TypeVar
 
@@ -21,11 +22,16 @@ EntityType = TypeVar(
 
 
 class World:
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        rng: _random_module.Random | None = None,
+    ) -> None:
         self._entities: list[Entity] = []
         self.selected_ant: Ant | None = None
         self._next_pheromone_id = 1
+        self._next_food_id = 1
         self._update_count = 0
+        self._rng = rng if rng is not None else _random_module.Random()
 
         self.add_entity(
             Nest(
@@ -34,22 +40,11 @@ class World:
             )
         )
 
-        for ant_id in range(
-            settings.STARTING_ANTS
-        ):
-            self.add_entity(
-                Ant(ant_id)
-            )
+        for ant_id in range(settings.STARTING_ANTS):
+            self.add_entity(Ant(ant_id))
 
-        self.add_entity(
-            Food(
-                food_id=1,
-                x=200,
-                y=200,
-                nutrition=5,
-                quantity=10,
-            )
-        )
+        for _ in range(settings.STARTING_FOOD_SOURCES):
+            self.add_entity(self._spawn_food())
 
         self.add_entity(
             Water(
@@ -96,7 +91,7 @@ class World:
     @property
     def resources(self) -> tuple[Resource, ...]:
         return self.entities_of_type(Resource)
-    
+
     @property
     def pheromones(self) -> tuple[Pheromone, ...]:
         return self.entities_of_type(Pheromone)
@@ -107,8 +102,7 @@ class World:
 
         if len(nests) != 1:
             raise RuntimeError(
-                "World must contain exactly one nest. "
-                f"Found {len(nests)}."
+                f"World must contain exactly one nest. Found {len(nests)}."
             )
 
         return nests[0]
@@ -118,10 +112,7 @@ class World:
         entity: Entity,
     ) -> None:
         if entity in self._entities:
-            raise ValueError(
-                "The entity is already registered "
-                "with this world."
-            )
+            raise ValueError("The entity is already registered with this world.")
 
         self._entities.append(entity)
 
@@ -132,10 +123,7 @@ class World:
         try:
             self._entities.remove(entity)
         except ValueError as error:
-            raise ValueError(
-                "The entity is not registered "
-                "with this world."
-            ) from error
+            raise ValueError("The entity is not registered with this world.") from error
 
         if entity is self.selected_ant:
             self.selected_ant = None
@@ -161,16 +149,11 @@ class World:
         ant: Ant,
     ) -> tuple[Entity, ...]:
         if ant not in self._entities:
-            raise ValueError(
-                "The ant is not registered "
-                "with this world."
-            )
+            raise ValueError("The ant is not registered with this world.")
 
-        discovered_entities = (
-            ant.senses.detect(
-                observer=ant,
-                candidates=self.entities,
-            )
+        discovered_entities = ant.senses.detect(
+            observer=ant,
+            candidates=self.entities,
         )
 
         for entity in discovered_entities:
@@ -213,8 +196,7 @@ class World:
         discovered_food = tuple(
             entity
             for entity in discovered_entities
-            if isinstance(entity, Food)
-            and not entity.is_depleted
+            if isinstance(entity, Food) and not entity.is_depleted
         )
 
         if not discovered_food:
@@ -250,7 +232,7 @@ class World:
             return
 
         ant.deposit_into(self.nest)
-    
+
     def _collect_food_for(
         self,
         ant: Ant,
@@ -283,6 +265,27 @@ class World:
 
             self._next_pheromone_id += 1
 
+    def _spawn_food(self) -> Food:
+        food_id = self._next_food_id
+        self._next_food_id += 1
+
+        x = self._rng.uniform(
+            settings.FOOD_RADIUS,
+            settings.WORLD_WIDTH - settings.FOOD_RADIUS,
+        )
+        y = self._rng.uniform(
+            settings.FOOD_RADIUS,
+            settings.SCREEN_HEIGHT - settings.FOOD_RADIUS,
+        )
+
+        return Food(
+            food_id=food_id,
+            x=x,
+            y=y,
+            nutrition=5,
+            quantity=10,
+        )
+
     def _remove_depleted_pheromones(self) -> None:
         for pheromone in self.pheromones:
             if pheromone.is_depleted:
@@ -292,6 +295,8 @@ class World:
         for resource in self.resources:
             if resource.is_depleted:
                 self.remove_entity(resource)
+                if isinstance(resource, Food):
+                    self.add_entity(self._spawn_food())
 
     def _clear_resource_target_references(
         self,
@@ -321,16 +326,12 @@ class World:
             return
 
         closest_ant: Ant | None = None
-        closest_distance = (
-            settings.CLICK_RADIUS
-        )
+        closest_distance = settings.CLICK_RADIUS
 
         for ant in self.ants:
-            distance = (
-                ant.distance_to_position(
-                    mouse_x,
-                    mouse_y,
-                )
+            distance = ant.distance_to_position(
+                mouse_x,
+                mouse_y,
             )
 
             if distance < closest_distance:
@@ -344,12 +345,7 @@ class World:
         x: float,
         y: float,
     ) -> bool:
-        return (
-            0 <= x <= settings.WORLD_WIDTH
-            and 0
-            <= y
-            <= settings.SCREEN_HEIGHT
-        )
+        return 0 <= x <= settings.WORLD_WIDTH and 0 <= y <= settings.SCREEN_HEIGHT
 
     def __repr__(self) -> str:
         return (

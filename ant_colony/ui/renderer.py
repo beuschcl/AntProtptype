@@ -1,5 +1,5 @@
 import logging
-from pathlib import Path
+from importlib.resources import as_file, files
 
 import pygame
 
@@ -10,11 +10,8 @@ from ant_colony.graphics.primitives import Circle, Polygon, Shape
 from ant_colony.world import World
 
 logger = logging.getLogger(__name__)
-WORLD_BACKGROUND_PATH = (
-    Path(__file__).resolve().parent.parent
-    / "assets"
-    / "backgrounds"
-    / "old-growth-forest-map.png"
+WORLD_BACKGROUND_ASSET = (
+    "assets/backgrounds/old-growth-forest-map.png"
 )
 
 
@@ -26,11 +23,7 @@ class Renderer:
     ) -> None:
         self.screen = screen
         self.camera = camera
-        self.world_background = self._load_world_background()
-
-    def draw(self, world: World) -> None:
-        self.screen.fill(settings.BACKGROUND_COLOR)
-        world_viewport = self.screen.subsurface(
+        self.world_viewport = self.screen.subsurface(
             (
                 0,
                 0,
@@ -38,7 +31,11 @@ class Renderer:
                 settings.SCREEN_HEIGHT,
             )
         )
-        world_viewport.blit(self.world_background, (0, 0))
+        self.world_background = self._load_world_background()
+
+    def draw(self, world: World) -> None:
+        self.screen.fill(settings.BACKGROUND_COLOR)
+        self.world_viewport.blit(self.world_background, (0, 0))
 
         for entity in world.entities:
             self._draw_entity(entity)
@@ -113,17 +110,21 @@ class Renderer:
 
     @staticmethod
     def _load_world_background() -> pygame.Surface:
+        background_resource = files("ant_colony").joinpath(
+            WORLD_BACKGROUND_ASSET
+        )
         try:
-            background = pygame.image.load(
-                str(WORLD_BACKGROUND_PATH)
-            )
+            with as_file(background_resource) as background_path:
+                background = pygame.image.load(
+                    str(background_path)
+                )
         except (
             FileNotFoundError,
             pygame.error,
         ) as error:
             logger.warning(
                 "Failed to load world background from %s: %s",
-                WORLD_BACKGROUND_PATH,
+                background_resource,
                 error,
             )
             fallback = pygame.Surface(

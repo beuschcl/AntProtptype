@@ -1,3 +1,4 @@
+from pathlib import Path
 from types import SimpleNamespace
 
 import pygame
@@ -36,9 +37,10 @@ def test_renderer_loads_and_scales_world_background_once(
     )
     renderer = renderer_module.Renderer(screen, Camera())
 
-    assert calls["path"] == str(
-        renderer_module.WORLD_BACKGROUND_PATH
-    )
+    assert Path(calls["path"]).name == Path(
+        renderer_module.WORLD_BACKGROUND_ASSET
+    ).name
+    assert Path(calls["path"]).is_absolute()
     assert calls["surface"] is loaded_surface
     assert calls["size"] == (
         settings.WORLD_WIDTH,

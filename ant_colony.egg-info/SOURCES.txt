@@ -43,6 +43,7 @@ tests/test_ant.py
 tests/test_camera.py
 tests/test_entity.py
 tests/test_food.py
+tests/test_food_spawning.py
 tests/test_graphics_primitives.py
 tests/test_inspector_snapshot.py
 tests/test_inventory.py

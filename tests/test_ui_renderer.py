@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 from pathlib import Path
+from tempfile import gettempdir
 from types import SimpleNamespace
 
 import pygame
@@ -46,7 +47,7 @@ def test_renderer_loads_and_scales_world_background_once(
 
     @contextmanager
     def fake_as_file(_: object):
-        yield Path("/tmp/old-growth-forest-map.png")
+        yield Path(gettempdir()) / "old-growth-forest-map.png"
 
     monkeypatch.setattr(pygame.image, "load", fake_load)
     monkeypatch.setattr(pygame.transform, "scale", fake_scale)
@@ -67,7 +68,9 @@ def test_renderer_loads_and_scales_world_background_once(
         fake_resource.joinpath_argument
         == renderer_module.WORLD_BACKGROUND_ASSET
     )
-    assert Path(calls["path"]).name == "old-growth-forest-map.png"
+    assert Path(calls["path"]).name == Path(
+        renderer_module.WORLD_BACKGROUND_ASSET
+    ).name
     assert Path(calls["path"]).is_absolute()
     assert calls["surface"] is loaded_surface
     assert calls["size"] == (

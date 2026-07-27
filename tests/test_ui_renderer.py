@@ -367,6 +367,7 @@ def test_renderer_draws_coordinate_text_only_with_g_toggle(
         labels.append(text)
 
     monkeypatch.setattr(renderer, "_draw_debug_text", capture_debug_text)
+    monkeypatch.setattr(pygame.mouse, "get_focused", lambda: True)
 
     renderer.show_hitboxes = True
     renderer.show_radius_overlays = True
@@ -395,6 +396,7 @@ def test_renderer_transforms_grid_labels_with_camera(
         captured.append((text, x, y))
 
     monkeypatch.setattr(renderer, "_draw_debug_text", capture_debug_text)
+    monkeypatch.setattr(pygame.mouse, "get_focused", lambda: True)
 
     renderer._draw_coordinate_overlay((150, 125))
 
@@ -414,3 +416,35 @@ def test_renderer_transforms_grid_labels_with_camera(
         expected_y_screen_x + 2,
         expected_y + 2,
     ) in captured
+
+
+def test_renderer_hides_cursor_coordinates_outside_world_viewport(
+    monkeypatch,
+) -> None:
+    screen = pygame.Surface(
+        (settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT)
+    )
+    renderer = renderer_module.Renderer(screen, Camera())
+    renderer.show_grid = True
+    world = World()
+    labels: list[str] = []
+
+    def capture_debug_text(text: str, _x: int, _y: int) -> None:
+        labels.append(text)
+
+    monkeypatch.setattr(renderer, "_draw_debug_text", capture_debug_text)
+
+    monkeypatch.setattr(
+        pygame.mouse,
+        "get_pos",
+        lambda: (settings.WORLD_WIDTH + 20, 100),
+    )
+    monkeypatch.setattr(pygame.mouse, "get_focused", lambda: True)
+    renderer.draw(world)
+    assert not any(label.startswith("cursor:") for label in labels)
+
+    labels.clear()
+    monkeypatch.setattr(pygame.mouse, "get_pos", lambda: (100, 100))
+    monkeypatch.setattr(pygame.mouse, "get_focused", lambda: False)
+    renderer.draw(world)
+    assert not any(label.startswith("cursor:") for label in labels)

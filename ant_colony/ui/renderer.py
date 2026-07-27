@@ -55,8 +55,18 @@ class Renderer:
     def draw(self, world: World) -> None:
         self.screen.fill(settings.BACKGROUND_COLOR)
         self.world_viewport.blit(self.world_background, (0, 0))
-        cursor_world = self._cursor_world_position()
-        hovered_entity = world.entity_under_position(cursor_world)
+        cursor_screen = self._cursor_screen_position()
+        cursor_world: tuple[float, float] | None
+        if cursor_screen is None:
+            cursor_world = None
+            hovered_entity = None
+        else:
+            cursor_world = self.camera.screen_to_world(
+                *cursor_screen
+            )
+            hovered_entity = world.entity_under_position(
+                cursor_world
+            )
 
         self.screen.set_clip(self._world_clip_rect)
 
@@ -77,8 +87,15 @@ class Renderer:
         if world.selected_ant is not None:
             self._draw_selection_ring(world.selected_ant)
 
-        if self.show_grid:
-            self._draw_coordinate_overlay(cursor_world)
+        if (
+            self.show_grid
+            and cursor_screen is not None
+            and cursor_world is not None
+            and self._should_show_cursor_coordinates(cursor_screen)
+        ):
+            self._draw_coordinate_overlay(
+                cursor_world,
+            )
 
         self.screen.set_clip(None)
         self._draw_inspector_divider()
@@ -295,12 +312,29 @@ class Renderer:
         )
         self.screen.blit(label, (x, y))
 
-    def _cursor_world_position(self) -> tuple[float, float]:
+    @staticmethod
+    def _cursor_screen_position() -> tuple[int, int] | None:
         try:
-            cursor_screen = pygame.mouse.get_pos()
+            return pygame.mouse.get_pos()
         except pygame.error:
-            cursor_screen = (0, 0)
-        return self.camera.screen_to_world(*cursor_screen)
+            # Raised in headless/uninitialized video contexts.
+            return None
+
+    def _should_show_cursor_coordinates(
+        self,
+        cursor_screen: tuple[int, int],
+    ) -> bool:
+        return (
+            self._mouse_is_focused()
+            and self._world_clip_rect.collidepoint(cursor_screen)
+        )
+
+    @staticmethod
+    def _mouse_is_focused() -> bool:
+        try:
+            return bool(pygame.mouse.get_focused())
+        except pygame.error:
+            return False
 
     def _draw_inspector_divider(self) -> None:
         pygame.draw.line(

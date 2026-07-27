@@ -1,5 +1,0 @@
-pygame<3,>=2.6
-
-[dev]
-pytest<10,>=8
-ruff<1,>=0.12

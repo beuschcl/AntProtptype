@@ -31,7 +31,7 @@ def test_renderer_loads_and_scales_world_background_once(
         calls["size"] = size
         return scaled_surface
 
-    class FakeResource:
+    class FakeTraversable:
         def __init__(self) -> None:
             self.joinpath_argument = ""
 
@@ -39,9 +39,9 @@ def test_renderer_loads_and_scales_world_background_once(
             self.joinpath_argument = value
             return object()
 
-    fake_resource = FakeResource()
+    fake_resource = FakeTraversable()
 
-    def fake_files(package: str) -> FakeResource:
+    def fake_files(package: str) -> FakeTraversable:
         calls["package"] = package
         return fake_resource
 

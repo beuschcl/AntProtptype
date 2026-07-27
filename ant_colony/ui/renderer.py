@@ -113,6 +113,9 @@ class Renderer:
         background_resource = files("ant_colony").joinpath(
             WORLD_BACKGROUND_ASSET
         )
+        attempted_location = (
+            f"ant_colony/{WORLD_BACKGROUND_ASSET}"
+        )
         try:
             with as_file(background_resource) as background_path:
                 background = pygame.image.load(
@@ -124,7 +127,7 @@ class Renderer:
         ) as error:
             logger.warning(
                 "Failed to load world background from %s: %s",
-                background_resource,
+                attempted_location,
                 error,
             )
             fallback = pygame.Surface(

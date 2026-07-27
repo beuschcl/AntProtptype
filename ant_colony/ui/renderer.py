@@ -1,3 +1,6 @@
+import logging
+from importlib.resources import as_file, files
+
 import pygame
 
 from ant_colony.config import settings
@@ -5,6 +8,12 @@ from ant_colony.entities.entity import Entity
 from ant_colony.graphics.camera import Camera
 from ant_colony.graphics.primitives import Circle, Polygon, Shape
 from ant_colony.world import World
+
+logger = logging.getLogger(__name__)
+PACKAGE_NAME = "ant_colony"
+WORLD_BACKGROUND_ASSET = (
+    "assets/backgrounds/old-growth-forest-map.png"
+)
 
 
 class Renderer:
@@ -15,9 +24,19 @@ class Renderer:
     ) -> None:
         self.screen = screen
         self.camera = camera
+        self.world_viewport = self.screen.subsurface(
+            (
+                0,
+                0,
+                settings.WORLD_WIDTH,
+                settings.SCREEN_HEIGHT,
+            )
+        )
+        self.world_background = self._load_world_background()
 
     def draw(self, world: World) -> None:
         self.screen.fill(settings.BACKGROUND_COLOR)
+        self.world_viewport.blit(self.world_background, (0, 0))
 
         for entity in world.entities:
             self._draw_entity(entity)
@@ -89,3 +108,43 @@ class Renderer:
             (settings.WORLD_WIDTH, 0),
             (settings.WORLD_WIDTH, settings.SCREEN_HEIGHT),
         )
+
+    @staticmethod
+    def _load_world_background() -> pygame.Surface:
+        background_resource = files(PACKAGE_NAME).joinpath(
+            WORLD_BACKGROUND_ASSET
+        )
+        attempted_location = (
+            f"{PACKAGE_NAME}/{WORLD_BACKGROUND_ASSET}"
+        )
+        try:
+            with as_file(background_resource) as background_path:
+                background = pygame.image.load(
+                    str(background_path)
+                )
+        except (
+            FileNotFoundError,
+            pygame.error,
+        ) as error:
+            logger.warning(
+                "Failed to load world background from %s: %s",
+                attempted_location,
+                error,
+            )
+            fallback = pygame.Surface(
+                (
+                    settings.WORLD_WIDTH,
+                    settings.SCREEN_HEIGHT,
+                )
+            )
+            fallback.fill(settings.BACKGROUND_COLOR)
+            return fallback
+
+        target_size = (
+            settings.WORLD_WIDTH,
+            settings.SCREEN_HEIGHT,
+        )
+        if background.get_size() == target_size:
+            return background
+
+        return pygame.transform.scale(background, target_size)

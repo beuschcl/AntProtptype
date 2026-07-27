@@ -210,8 +210,8 @@ def test_renderer_draws_camera_transformed_grid_lines(
 
     renderer._draw_grid()
 
-    expected_x = camera.world_to_screen(100, 0)[0]
-    expected_y = camera.world_to_screen(0, 100)[1]
+    expected_x, _ = camera.world_to_screen(100, 0)
+    _, expected_y = camera.world_to_screen(0, 100)
     assert any(
         start == (expected_x, 0)
         and end == (expected_x, settings.SCREEN_HEIGHT)
@@ -219,7 +219,7 @@ def test_renderer_draws_camera_transformed_grid_lines(
     )
     assert any(
         start == (0, expected_y)
-        and end == (settings.WORLD_WIDTH, expected_y)
+        and end == (settings.SCREEN_WIDTH, expected_y)
         for start, end in lines
     )
 
@@ -398,7 +398,19 @@ def test_renderer_transforms_grid_labels_with_camera(
 
     renderer._draw_coordinate_overlay((150, 125))
 
-    expected_x = camera.world_to_screen(100, 0)
-    expected_y = camera.world_to_screen(0, 100)
-    assert ("100", expected_x[0] + 2, expected_x[1] + 2) in captured
-    assert ("100", expected_y[0] + 2, expected_y[1] + 2) in captured
+    expected_x, expected_x_screen_y = (
+        camera.world_to_screen(100, 0)
+    )
+    expected_y_screen_x, expected_y = (
+        camera.world_to_screen(0, 100)
+    )
+    assert (
+        "100",
+        expected_x + 2,
+        expected_x_screen_y + 2,
+    ) in captured
+    assert (
+        "100",
+        expected_y_screen_x + 2,
+        expected_y + 2,
+    ) in captured

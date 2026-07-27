@@ -35,7 +35,7 @@ class Renderer:
                 0,
                 0,
                 settings.WORLD_WIDTH,
-                settings.SCREEN_HEIGHT,
+                settings.WORLD_HEIGHT,
             )
         )
         self.world_background = self._load_world_background()
@@ -43,7 +43,7 @@ class Renderer:
             0,
             0,
             settings.WORLD_WIDTH,
-            settings.SCREEN_HEIGHT,
+            settings.WORLD_HEIGHT,
         )
         self.show_grid = False
         self.show_hitboxes = False
@@ -190,7 +190,7 @@ class Renderer:
 
         for y in range(
             0,
-            settings.SCREEN_HEIGHT + 1,
+            settings.WORLD_HEIGHT + 1,
             settings.DEBUG_GRID_SPACING,
         ):
             _, screen_y = self.camera.world_to_screen(0, y)
@@ -198,7 +198,7 @@ class Renderer:
                 self.screen,
                 settings.DEBUG_GRID_COLOR,
                 (0, screen_y),
-                (settings.WORLD_WIDTH, screen_y),
+                (settings.SCREEN_WIDTH, screen_y),
             )
 
     def _draw_hitboxes(self, world: World) -> None:
@@ -269,7 +269,7 @@ class Renderer:
 
         for y in range(
             settings.DEBUG_GRID_SPACING,
-            settings.SCREEN_HEIGHT,
+            settings.WORLD_HEIGHT,
             settings.DEBUG_GRID_SPACING * 2,
         ):
             screen_x, screen_y = self.camera.world_to_screen(
@@ -335,7 +335,7 @@ class Renderer:
             fallback = pygame.Surface(
                 (
                     settings.WORLD_WIDTH,
-                    settings.SCREEN_HEIGHT,
+                    settings.WORLD_HEIGHT,
                 )
             )
             fallback.fill(settings.BACKGROUND_COLOR)
@@ -343,7 +343,7 @@ class Renderer:
 
         target_size = (
             settings.WORLD_WIDTH,
-            settings.SCREEN_HEIGHT,
+            settings.WORLD_HEIGHT,
         )
         if background.get_size() == target_size:
             return background

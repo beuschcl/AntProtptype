@@ -272,14 +272,19 @@ def test_world_rejects_sensing_for_unregistered_ant() -> None:
 def test_world_assigns_closest_discovered_food() -> None:
     world = World()
     ant = world.ants[0]
+    collect_boundary = (
+        ant.hitbox_radius
+        + settings.FOOD_RADIUS
+        + settings.ANT_INTERACTION_RADIUS
+    )
 
     existing_food = world.food[0]
-    existing_food.x = 130
+    existing_food.x = 100 + collect_boundary + 8
     existing_food.y = 100
 
     farther_food = Food(
         food_id=9998,
-        x=140,
+        x=100 + collect_boundary + 18,
         y=100,
         nutrition=5,
     )
@@ -453,7 +458,7 @@ def test_world_deposits_pheromone_for_carrying_ant() -> None:
         other_ant.speed = 0
     for food in world.food:
         food.x = settings.WORLD_WIDTH
-        food.y = settings.SCREEN_HEIGHT
+        food.y = settings.WORLD_HEIGHT
 
     ant.x = 100
     ant.y = 200
@@ -482,7 +487,7 @@ def test_world_does_not_deposit_for_wandering_ant() -> None:
     world = World()
     for food in world.food:
         food.x = settings.WORLD_WIDTH
-        food.y = settings.SCREEN_HEIGHT
+        food.y = settings.WORLD_HEIGHT
 
     for ant in world.ants:
         ant.x = 0
@@ -503,7 +508,7 @@ def test_world_respects_pheromone_deposit_interval() -> None:
         other_ant.speed = 0
     for food in world.food:
         food.x = settings.WORLD_WIDTH
-        food.y = settings.SCREEN_HEIGHT
+        food.y = settings.WORLD_HEIGHT
 
     ant.x = 100
     ant.y = 200
@@ -531,7 +536,7 @@ def test_world_removes_depleted_pheromone() -> None:
     world = World()
     for food in world.food:
         food.x = settings.WORLD_WIDTH
-        food.y = settings.SCREEN_HEIGHT
+        food.y = settings.WORLD_HEIGHT
     for ant in world.ants:
         ant.x = 0
         ant.y = 0

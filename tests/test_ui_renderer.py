@@ -1,4 +1,3 @@
-from pathlib import Path
 from types import SimpleNamespace
 
 import pygame
@@ -37,14 +36,9 @@ def test_renderer_loads_and_scales_world_background_once(
     )
     renderer = renderer_module.Renderer(screen, Camera())
 
-    expected_path = (
-        Path(renderer_module.__file__).resolve().parent.parent
-        / "assets"
-        / "backgrounds"
-        / "old-growth-forest-map.png"
+    assert calls["path"] == str(
+        renderer_module.WORLD_BACKGROUND_PATH
     )
-
-    assert Path(calls["path"]) == expected_path
     assert calls["surface"] is loaded_surface
     assert calls["size"] == (
         settings.WORLD_WIDTH,

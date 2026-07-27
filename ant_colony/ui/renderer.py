@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 import pygame
@@ -7,6 +8,14 @@ from ant_colony.entities.entity import Entity
 from ant_colony.graphics.camera import Camera
 from ant_colony.graphics.primitives import Circle, Polygon, Shape
 from ant_colony.world import World
+
+logger = logging.getLogger(__name__)
+WORLD_BACKGROUND_PATH = (
+    Path(__file__).resolve().parent.parent
+    / "assets"
+    / "backgrounds"
+    / "old-growth-forest-map.png"
+)
 
 
 class Renderer:
@@ -104,18 +113,19 @@ class Renderer:
 
     @staticmethod
     def _load_world_background() -> pygame.Surface:
-        background_path = (
-            Path(__file__).resolve().parent.parent
-            / "assets"
-            / "backgrounds"
-            / "old-growth-forest-map.png"
-        )
         try:
-            background = pygame.image.load(str(background_path))
+            background = pygame.image.load(
+                str(WORLD_BACKGROUND_PATH)
+            )
         except (
             FileNotFoundError,
             pygame.error,
-        ):
+        ) as error:
+            logger.warning(
+                "Failed to load world background from %s: %s",
+                WORLD_BACKGROUND_PATH,
+                error,
+            )
             fallback = pygame.Surface(
                 (
                     settings.WORLD_WIDTH,

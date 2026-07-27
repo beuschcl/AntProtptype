@@ -21,7 +21,15 @@ class Renderer:
 
     def draw(self, world: World) -> None:
         self.screen.fill(settings.BACKGROUND_COLOR)
-        self.screen.blit(self.world_background, (0, 0))
+        world_viewport = self.screen.subsurface(
+            (
+                0,
+                0,
+                settings.WORLD_WIDTH,
+                settings.SCREEN_HEIGHT,
+            )
+        )
+        world_viewport.blit(self.world_background, (0, 0))
 
         for entity in world.entities:
             self._draw_entity(entity)
@@ -102,7 +110,20 @@ class Renderer:
             / "backgrounds"
             / "old-growth-forest-map.png"
         )
-        background = pygame.image.load(str(background_path))
+        try:
+            background = pygame.image.load(str(background_path))
+        except (
+            FileNotFoundError,
+            pygame.error,
+        ):
+            fallback = pygame.Surface(
+                (
+                    settings.WORLD_WIDTH,
+                    settings.SCREEN_HEIGHT,
+                )
+            )
+            fallback.fill(settings.BACKGROUND_COLOR)
+            return fallback
 
         return pygame.transform.scale(
             background,

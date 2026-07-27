@@ -88,3 +88,29 @@ def test_renderer_draws_background_only_in_world_viewport(
         screen.get_at((settings.WORLD_WIDTH, 10))[:3]
         == settings.INSPECTOR_DIVIDER_COLOR
     )
+
+
+def test_renderer_uses_fallback_when_background_load_fails(
+    monkeypatch,
+) -> None:
+    def raise_file_not_found(_: str) -> pygame.Surface:
+        raise FileNotFoundError
+
+    monkeypatch.setattr(
+        pygame.image,
+        "load",
+        raise_file_not_found,
+    )
+
+    screen = pygame.Surface(
+        (settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT)
+    )
+    renderer = renderer_module.Renderer(screen, Camera())
+
+    assert renderer.world_background.get_size() == (
+        settings.WORLD_WIDTH,
+        settings.SCREEN_HEIGHT,
+    )
+    assert renderer.world_background.get_at((0, 0))[:3] == (
+        settings.BACKGROUND_COLOR
+    )

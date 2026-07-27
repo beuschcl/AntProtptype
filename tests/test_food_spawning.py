@@ -81,6 +81,7 @@ def test_depleting_food_removes_it_and_spawns_one_replacement() -> None:
 
     assert food not in world.entities
     assert food not in world.food
+    assert len(world.food) == settings.STARTING_FOOD_SOURCES
 
 
 def test_food_count_stays_constant_after_depletion() -> None:

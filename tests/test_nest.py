@@ -14,14 +14,17 @@ def test_nest_starts_with_empty_food_reserve() -> None:
 
     assert nest.food_reserve == 0
     assert nest.delivered_portions == 0
-    shape = nest.shapes()[0]
+    outer_shape, outline_shape = nest.shapes()
 
-    assert isinstance(shape, Polygon)
-    assert shape.width == 3
-    assert len(shape.points) == 6
-    assert shape.points[0] == pytest.approx(
+    assert isinstance(outer_shape, Polygon)
+    assert outer_shape.width == 5
+    assert outer_shape.color == settings.NEST_COLOR
+    assert len(outer_shape.points) == 6
+    assert outer_shape.points[0] == pytest.approx(
         (100 + settings.NEST_RADIUS, 100)
     )
+    assert outline_shape.width == 1
+    assert outline_shape.color == settings.NEST_OUTLINE_COLOR
 
 
 def test_nest_deposits_food_portions() -> None:

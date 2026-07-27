@@ -44,4 +44,12 @@ class Water(Resource):
                 color=settings.WATER_COLOR,
                 width=3,
             ),
+            Ellipse(
+                x=self.x,
+                y=self.y,
+                radius_x=settings.WATER_RADIUS * 0.65,
+                radius_y=settings.WATER_RADIUS * 0.45,
+                color=settings.WATER_COLOR,
+                width=2,
+            ),
         )

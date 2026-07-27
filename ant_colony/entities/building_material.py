@@ -54,4 +54,14 @@ class BuildingMaterial(Resource):
                 ),
                 color=settings.BUILDING_MATERIAL_COLOR,
             ),
+            Polygon(
+                points=(
+                    (self.x - radius, self.y - radius),
+                    (self.x + radius, self.y - radius),
+                    (self.x + radius, self.y + radius),
+                    (self.x - radius, self.y + radius),
+                ),
+                color=settings.BUILDING_MATERIAL_OUTLINE_COLOR,
+                width=2,
+            ),
         )

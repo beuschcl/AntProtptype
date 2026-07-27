@@ -47,4 +47,14 @@ class Food(Resource):
                 ),
                 color=settings.FOOD_COLOR,
             ),
+            Polygon(
+                points=(
+                    (self.x, self.y - radius),
+                    (self.x + radius, self.y),
+                    (self.x, self.y + radius),
+                    (self.x - radius, self.y),
+                ),
+                color=settings.FOOD_OUTLINE_COLOR,
+                width=2,
+            ),
         )

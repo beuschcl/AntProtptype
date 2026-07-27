@@ -91,4 +91,4 @@ def test_pheromone_exposes_circle_shape() -> None:
     assert isinstance(shapes[0], Circle)
     assert shapes[0].x == 100
     assert shapes[0].y == 200
-    assert shapes[0].color == (180, 95, 220)
+    assert shapes[0].color == settings.PHEROMONE_COLOR

@@ -47,6 +47,7 @@ class Renderer:
         )
         self.show_grid = False
         self.show_hitboxes = False
+        self.show_radius_overlays = False
         if not pygame.font.get_init():
             pygame.font.init()
         self.debug_font = pygame.font.SysFont(None, 18)
@@ -67,15 +68,16 @@ class Renderer:
 
         if self.show_hitboxes:
             self._draw_hitboxes(world)
-            if hovered_entity is not None:
-                self._draw_hovered_radii(hovered_entity)
+        if (
+            self.show_radius_overlays
+            and hovered_entity is not None
+        ):
+            self._draw_hovered_radii(hovered_entity)
 
         if world.selected_ant is not None:
             self._draw_selection_ring(world.selected_ant)
 
-        self._draw_scope_boundaries()
-
-        if self.show_grid or self.show_hitboxes:
+        if self.show_grid:
             self._draw_coordinate_overlay(cursor_world)
 
         self.screen.set_clip(None)
@@ -89,6 +91,10 @@ class Renderer:
             self.show_grid = not self.show_grid
         elif event.key == pygame.K_h:
             self.show_hitboxes = not self.show_hitboxes
+        elif event.key == pygame.K_r:
+            self.show_radius_overlays = (
+                not self.show_radius_overlays
+            )
 
     def _draw_entity(self, entity: Entity) -> None:
         for shape in entity.shapes():
@@ -174,11 +180,12 @@ class Renderer:
             settings.WORLD_WIDTH + 1,
             settings.DEBUG_GRID_SPACING,
         ):
+            screen_x, _ = self.camera.world_to_screen(x, 0)
             pygame.draw.line(
                 self.screen,
                 settings.DEBUG_GRID_COLOR,
-                (x, 0),
-                (x, settings.SCREEN_HEIGHT),
+                (screen_x, 0),
+                (screen_x, settings.SCREEN_HEIGHT),
             )
 
         for y in range(
@@ -186,11 +193,12 @@ class Renderer:
             settings.SCREEN_HEIGHT + 1,
             settings.DEBUG_GRID_SPACING,
         ):
+            _, screen_y = self.camera.world_to_screen(0, y)
             pygame.draw.line(
                 self.screen,
                 settings.DEBUG_GRID_COLOR,
-                (0, y),
-                (settings.WORLD_WIDTH, y),
+                (0, screen_y),
+                (settings.WORLD_WIDTH, screen_y),
             )
 
     def _draw_hitboxes(self, world: World) -> None:
@@ -249,14 +257,30 @@ class Renderer:
             settings.WORLD_WIDTH,
             settings.DEBUG_GRID_SPACING * 2,
         ):
-            self._draw_debug_text(str(x), x + 2, 2)
+            screen_x, screen_y = self.camera.world_to_screen(
+                x,
+                0,
+            )
+            self._draw_debug_text(
+                str(x),
+                screen_x + 2,
+                screen_y + 2,
+            )
 
         for y in range(
             settings.DEBUG_GRID_SPACING,
             settings.SCREEN_HEIGHT,
             settings.DEBUG_GRID_SPACING * 2,
         ):
-            self._draw_debug_text(str(y), 2, y + 2)
+            screen_x, screen_y = self.camera.world_to_screen(
+                0,
+                y,
+            )
+            self._draw_debug_text(
+                str(y),
+                screen_x + 2,
+                screen_y + 2,
+            )
 
     def _draw_debug_text(
         self,
@@ -270,14 +294,6 @@ class Renderer:
             settings.DEBUG_TEXT_COLOR,
         )
         self.screen.blit(label, (x, y))
-
-    def _draw_scope_boundaries(self) -> None:
-        pygame.draw.rect(
-            self.screen,
-            settings.SCOPE_BOUNDARY_COLOR,
-            self._world_clip_rect,
-            1,
-        )
 
     def _cursor_world_position(self) -> tuple[float, float]:
         try:

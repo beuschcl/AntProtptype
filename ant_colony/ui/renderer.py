@@ -10,6 +10,7 @@ from ant_colony.graphics.primitives import Circle, Polygon, Shape
 from ant_colony.world import World
 
 logger = logging.getLogger(__name__)
+PACKAGE_NAME = "ant_colony"
 WORLD_BACKGROUND_ASSET = (
     "assets/backgrounds/old-growth-forest-map.png"
 )
@@ -110,11 +111,11 @@ class Renderer:
 
     @staticmethod
     def _load_world_background() -> pygame.Surface:
-        background_resource = files("ant_colony").joinpath(
+        background_resource = files(PACKAGE_NAME).joinpath(
             WORLD_BACKGROUND_ASSET
         )
         attempted_location = (
-            f"ant_colony/{WORLD_BACKGROUND_ASSET}"
+            f"{PACKAGE_NAME}/{WORLD_BACKGROUND_ASSET}"
         )
         try:
             with as_file(background_resource) as background_path:

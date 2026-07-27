@@ -35,9 +35,9 @@ def test_renderer_loads_and_scales_world_background_once(
         def __init__(self) -> None:
             self.joinpath_argument = ""
 
-        def joinpath(self, value: str) -> object:
+        def joinpath(self, value: str) -> "FakeTraversable":
             self.joinpath_argument = value
-            return object()
+            return self
 
     fake_resource = FakeTraversable()
 

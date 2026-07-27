@@ -58,6 +58,11 @@ def test_renderer_loads_and_scales_world_background_once(
         "as_file",
         fake_as_file,
     )
+    monkeypatch.setattr(
+        renderer_module.Renderer,
+        "_load_ant_worker_sprite",
+        staticmethod(lambda: loaded_surface),
+    )
 
     screen = pygame.Surface(
         (settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT)
@@ -79,6 +84,103 @@ def test_renderer_loads_and_scales_world_background_once(
         settings.SCREEN_HEIGHT,
     )
     assert renderer.world_background is scaled_surface
+
+
+def test_renderer_loads_worker_sprite_from_package(
+    monkeypatch,
+) -> None:
+    background = pygame.Surface(
+        (settings.WORLD_WIDTH, settings.SCREEN_HEIGHT)
+    )
+    worker_sprite = pygame.Surface((24, 32), pygame.SRCALPHA)
+    calls: dict[str, object] = {}
+
+    monkeypatch.setattr(
+        renderer_module.Renderer,
+        "_load_world_background",
+        staticmethod(lambda: background),
+    )
+
+    class FakeTraversable:
+        def joinpath(self, value: str) -> "FakeTraversable":
+            calls["resource"] = value
+            return self
+
+    def fake_files(package: str) -> FakeTraversable:
+        calls["package"] = package
+        return FakeTraversable()
+
+    @contextmanager
+    def fake_as_file(_: object):
+        yield Path(gettempdir()) / "meadow-ant-worker-2x2.png"
+
+    def fake_load(path: str) -> pygame.Surface:
+        calls["path"] = path
+        return worker_sprite
+
+    monkeypatch.setattr(renderer_module, "files", fake_files)
+    monkeypatch.setattr(renderer_module, "as_file", fake_as_file)
+    monkeypatch.setattr(pygame.image, "load", fake_load)
+
+    screen = pygame.Surface(
+        (settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT)
+    )
+    renderer = renderer_module.Renderer(screen, Camera())
+
+    assert calls["package"] == "ant_colony"
+    assert calls["resource"] == renderer_module.ANT_WORKER_ASSET
+    assert Path(calls["path"]).name == Path(
+        renderer_module.ANT_WORKER_ASSET
+    ).name
+    assert renderer.ant_worker_sprite is worker_sprite
+
+
+def test_renderer_aligns_worker_head_with_ant_heading(
+    monkeypatch,
+) -> None:
+    background = pygame.Surface(
+        (settings.WORLD_WIDTH, settings.SCREEN_HEIGHT)
+    )
+    worker_sprite = pygame.Surface((24, 32), pygame.SRCALPHA)
+    monkeypatch.setattr(
+        renderer_module.Renderer,
+        "_load_world_background",
+        staticmethod(lambda: background),
+    )
+    monkeypatch.setattr(
+        renderer_module.Renderer,
+        "_load_ant_worker_sprite",
+        staticmethod(lambda: worker_sprite),
+    )
+
+    screen = pygame.Surface(
+        (settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT)
+    )
+    renderer = renderer_module.Renderer(screen, Camera())
+    world = World()
+    ant = world.ants[0]
+    ant.x = 100
+    ant.y = 120
+    ant.heading = 0
+    rotations: list[float] = []
+    original_rotate = pygame.transform.rotate
+
+    def capture_rotate(
+        surface: pygame.Surface,
+        angle: float,
+    ) -> pygame.Surface:
+        rotations.append(angle)
+        return original_rotate(surface, angle)
+
+    monkeypatch.setattr(
+        pygame.transform,
+        "rotate",
+        capture_rotate,
+    )
+
+    renderer._draw_ant(ant)
+
+    assert rotations == [-90]
 
 
 def test_renderer_draws_background_only_in_world_viewport(

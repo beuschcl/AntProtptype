@@ -19,12 +19,17 @@ def main() -> None:
         window = WindowController()
         screen = window.create_screen()
 
-        pygame.display.set_caption(settings.WINDOW_TITLE)
+        pygame.display.set_caption(
+            settings.WINDOW_TITLE
+        )
 
         clock = pygame.time.Clock()
         camera = Camera()
         world = World(rng=_random_module.Random(world_seed))
-        renderer = Renderer(screen, camera)
+        renderer = Renderer(
+            screen,
+            camera,
+        )
         inspector = Inspector()
         completion_overlay = CompletionOverlay()
 
@@ -32,6 +37,7 @@ def main() -> None:
 
         while running:
             layout = window.layout(screen)
+            world_restarted = False
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
@@ -39,6 +45,7 @@ def main() -> None:
                     action = completion_overlay.handle_event(event)
                     if action == "restart":
                         world = World(rng=_random_module.Random(world_seed))
+                        world_restarted = True
                     elif action == "exit":
                         running = False
                 elif event.type == pygame.KEYDOWN:
@@ -63,10 +70,17 @@ def main() -> None:
                     and event.button == 1
                     and layout.world_viewport.collidepoint(event.pos)
                 ):
-                    world_position = camera.screen_to_world(*event.pos)
-                    world.handle_click(world_position)
+                    world_position = (
+                        camera.screen_to_world(
+                            *event.pos,
+                        )
+                    )
 
-            if not world.is_complete:
+                    world.handle_click(
+                        world_position
+                    )
+
+            if not world.is_complete and not world_restarted:
                 world.update()
 
             layout = window.layout(screen)
@@ -75,7 +89,11 @@ def main() -> None:
             if world.is_complete:
                 completion_overlay.draw(screen, layout)
 
-            inspector.draw(screen, world, layout)
+            inspector.draw(
+                screen,
+                world,
+                layout,
+            )
 
             pygame.display.flip()
             clock.tick(settings.FPS)

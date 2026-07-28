@@ -30,7 +30,9 @@ class Inspector:
         snapshot = InspectorSnapshot.from_world(world)
 
         x = (
-            layout.inspector_rect.x if layout is not None else settings.WORLD_WIDTH
+            layout.inspector_rect.x
+            if layout is not None
+            else settings.WORLD_WIDTH
         ) + self.LEFT_PADDING
         y = self.TOP_PADDING
 
@@ -83,10 +85,24 @@ class Inspector:
         return (
             "Colony",
             f"Ants: {snapshot.ant_count}",
-            (f"Food sources: {snapshot.food_source_count}"),
-            (f"Food portions: {snapshot.remaining_food_portions}"),
-            (f"Nest reserve: {snapshot.nest_food_reserve}"),
-            (f"Delivered: {snapshot.delivered_portions}"),
+            (
+                "Food sources: "
+                f"{snapshot.food_source_count}"
+            ),
+            (
+                "Food portions: "
+                f"{snapshot.remaining_food_portions}"
+            ),
+            (
+                "Nest reserve: "
+                f"{snapshot.nest_food_reserve}"
+            ),
+            (
+                "Delivered: "
+                f"{snapshot.delivered_portions}"
+            ),
+
+
             f"Pheromones: {snapshot.pheromone_count}",
         )
 
@@ -102,15 +118,24 @@ class Inspector:
                 f"({int(snapshot.selected_ant_x or 0)}, "
                 f"{int(snapshot.selected_ant_y or 0)})"
             ),
-            (f"Speed: {snapshot.selected_ant_speed or 0:.2f}"),
-            (f"Heading: {snapshot.selected_ant_heading or 0:.1f}"),
+            (
+                "Speed: "
+                f"{snapshot.selected_ant_speed or 0:.2f}"
+            ),
+            (
+                "Heading: "
+                f"{snapshot.selected_ant_heading or 0:.1f}"
+            ),
             f"State: {snapshot.selected_ant_state}",
             (
                 "Inventory: "
                 f"{snapshot.selected_ant_inventory_count}/"
                 f"{snapshot.selected_ant_inventory_capacity}"
             ),
-            (f"Knowledge: {snapshot.selected_ant_knowledge_count}"),
+            (
+                "Knowledge: "
+                f"{snapshot.selected_ant_knowledge_count}"
+            ),
             f"Target: {snapshot.selected_ant_target}",
             (
                 "Hydration: "

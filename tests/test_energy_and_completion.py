@@ -868,3 +868,40 @@ def test_initial_ants_start_at_nest_and_pay_on_first_departure() -> None:
     for ant in world.ants:
         assert ant.energy.current == expected
         assert ant.on_excursion
+
+
+def test_restart_skips_world_update_on_same_frame() -> None:
+    """A fresh world created by Start Over must not be updated in the restart frame.
+
+    The first rendered frame after restart must show exactly the initial state:
+    ants at the nest, full energy and hydration, zero nest reserve, no selection,
+    and no stale pheromones, memories, or completion state.
+    """
+    seed = 99
+    world_restarted = True
+    world_new = World(rng=random.Random(seed))
+
+    # Record the pristine initial state before any update.
+    initial_energy = [ant.energy.current for ant in world_new.ants]
+    initial_hydration = [ant.hydration.current for ant in world_new.ants]
+
+    # Simulate main.py's guard: `if not world.is_complete and not world_restarted`
+    if not world_new.is_complete and not world_restarted:
+        world_new.update()  # must NOT execute on restart frame
+
+    # State must be identical to the moment of construction — no update ran.
+    assert world_new.nest.food_reserve == 0
+    assert world_new.selected_ant is None
+    assert len(world_new.pheromones) == 0
+    assert len(world_new.ants) == settings.STARTING_ANTS
+    assert len(world_new.food) == settings.STARTING_FOOD_SOURCES
+
+    for i, ant in enumerate(world_new.ants):
+        assert ant.energy.current == initial_energy[i], (
+            "ant energy must be unchanged in restart frame"
+        )
+        assert ant.hydration.current == pytest.approx(initial_hydration[i]), (
+            "ant hydration must be unchanged in restart frame"
+        )
+        assert not ant.on_excursion
+

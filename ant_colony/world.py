@@ -48,7 +48,9 @@ class World:
         )
 
         nest = self.nest
-        for ant_id in range(settings.STARTING_ANTS):
+        for ant_id in range(
+            settings.STARTING_ANTS
+        ):
             ant = Ant(ant_id, rng=self._rng)
             ant.x = nest.x
             ant.y = nest.y
@@ -102,7 +104,7 @@ class World:
     @property
     def resources(self) -> tuple[Resource, ...]:
         return self.entities_of_type(Resource)
-
+    
     @property
     def pheromones(self) -> tuple[Pheromone, ...]:
         return self.entities_of_type(Pheromone)
@@ -113,7 +115,8 @@ class World:
 
         if len(nests) != 1:
             raise RuntimeError(
-                f"World must contain exactly one nest. Found {len(nests)}."
+                "World must contain exactly one nest. "
+                f"Found {len(nests)}."
             )
 
         return nests[0]
@@ -128,7 +131,10 @@ class World:
         entity: Entity,
     ) -> None:
         if entity in self._entities:
-            raise ValueError("The entity is already registered with this world.")
+            raise ValueError(
+                "The entity is already registered "
+                "with this world."
+            )
 
         self._entities.append(entity)
 
@@ -139,7 +145,10 @@ class World:
         try:
             self._entities.remove(entity)
         except ValueError as error:
-            raise ValueError("The entity is not registered with this world.") from error
+            raise ValueError(
+                "The entity is not registered "
+                "with this world."
+            ) from error
 
         if entity is self.selected_ant:
             self.selected_ant = None
@@ -165,11 +174,16 @@ class World:
         ant: Ant,
     ) -> tuple[Entity, ...]:
         if ant not in self._entities:
-            raise ValueError("The ant is not registered with this world.")
+            raise ValueError(
+                "The ant is not registered "
+                "with this world."
+            )
 
-        discovered_entities = ant.senses.detect(
-            observer=ant,
-            candidates=self.entities,
+        discovered_entities = (
+            ant.senses.detect(
+                observer=ant,
+                candidates=self.entities,
+            )
         )
 
         for entity in discovered_entities:
@@ -252,7 +266,8 @@ class World:
         discovered_food = tuple(
             entity
             for entity in discovered_entities
-            if isinstance(entity, Food) and not entity.is_depleted
+            if isinstance(entity, Food)
+            and not entity.is_depleted
         )
 
         if discovered_food:
@@ -285,7 +300,11 @@ class World:
         ant: Ant,
         discovered_entities: tuple[Entity, ...],
     ) -> Food | None:
-        food_by_id = {food.id: food for food in self.food if not food.is_depleted}
+        food_by_id = {
+            food.id: food
+            for food in self.food
+            if not food.is_depleted
+        }
         recruitable: list[tuple[Pheromone, Food]] = []
 
         for entity in discovered_entities:
@@ -315,7 +334,11 @@ class World:
         self,
         ant: Ant,
     ) -> Food | None:
-        food_by_id = {food.id: food for food in self.food if not food.is_depleted}
+        food_by_id = {
+            food.id: food
+            for food in self.food
+            if not food.is_depleted
+        }
         remembered_food: list[Food] = []
 
         for memory in ant.knowledge.memories:
@@ -372,7 +395,7 @@ class World:
         if deposited > 0:
             ant.arrive()
         return deposited
-
+    
     def _collect_food_for(
         self,
         ant: Ant,
@@ -524,7 +547,9 @@ class World:
         if not isinstance(resource, Food):
             return
 
-        memory_name = EntityObservation.from_entity(resource).memory_name
+        memory_name = EntityObservation.from_entity(
+            resource
+        ).memory_name
 
         for ant in self.ants:
             ant.knowledge.forget(memory_name)
@@ -553,12 +578,16 @@ class World:
             return
 
         closest_ant: Ant | None = None
-        closest_distance = settings.CLICK_RADIUS
+        closest_distance = (
+            settings.CLICK_RADIUS
+        )
 
         for ant in self.ants:
-            distance = ant.distance_to_position(
-                mouse_x,
-                mouse_y,
+            distance = (
+                ant.distance_to_position(
+                    mouse_x,
+                    mouse_y,
+                )
             )
 
             if distance < closest_distance:
@@ -577,7 +606,9 @@ class World:
             return None
 
         matching_entities = tuple(
-            entity for entity in self._entities if entity.intersects_position(x, y)
+            entity
+            for entity in self._entities
+            if entity.intersects_position(x, y)
         )
 
         if not matching_entities:
@@ -596,7 +627,12 @@ class World:
         x: float,
         y: float,
     ) -> bool:
-        return 0 <= x <= settings.WORLD_WIDTH and 0 <= y <= settings.WORLD_HEIGHT
+        return (
+            0 <= x <= settings.WORLD_WIDTH
+            and 0
+            <= y
+            <= settings.WORLD_HEIGHT
+        )
 
     def __repr__(self) -> str:
         return (

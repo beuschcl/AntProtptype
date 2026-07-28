@@ -25,12 +25,12 @@ if TYPE_CHECKING:
 class Ant(Entity):
     def __init__(self, ant_id: int) -> None:
         x = random.uniform(
-            0,
-            settings.WORLD_WIDTH,
+            settings.ANT_BOUNDARY_PADDING,
+            settings.WORLD_WIDTH - settings.ANT_BOUNDARY_PADDING,
         )
         y = random.uniform(
-            0,
-            settings.SCREEN_HEIGHT,
+            settings.ANT_BOUNDARY_PADDING,
+            settings.WORLD_HEIGHT - settings.ANT_BOUNDARY_PADDING,
         )
 
         super().__init__(
@@ -259,7 +259,7 @@ class Ant(Entity):
             )
         )
 
-        self.wrap_position()
+        self.contain_position()
 
     def wander(self) -> None:
         heading_radians = math.radians(
@@ -280,18 +280,35 @@ class Ant(Entity):
             settings.ANT_TURN_SPEED,
         )
 
-        self.wrap_position()
+        self.contain_position()
+
+    def contain_position(self) -> None:
+        padding = settings.ANT_BOUNDARY_PADDING
+        hit_horizontal_boundary = not (
+            padding <= self.x <= settings.WORLD_WIDTH - padding
+        )
+        hit_vertical_boundary = not (
+            padding <= self.y <= settings.WORLD_HEIGHT - padding
+        )
+
+        self.x = min(
+            max(self.x, padding),
+            settings.WORLD_WIDTH - padding,
+        )
+        self.y = min(
+            max(self.y, padding),
+            settings.WORLD_HEIGHT - padding,
+        )
+
+        if hit_horizontal_boundary:
+            self.heading = 180 - self.heading
+        if hit_vertical_boundary:
+            self.heading = -self.heading
+        self.heading %= 360
 
     def wrap_position(self) -> None:
-        if self.x < 0:
-            self.x = settings.WORLD_WIDTH
-        elif self.x > settings.WORLD_WIDTH:
-            self.x = 0
-
-        if self.y < 0:
-            self.y = settings.SCREEN_HEIGHT
-        elif self.y > settings.SCREEN_HEIGHT:
-            self.y = 0
+        """Compatibility alias for the former wrapping boundary."""
+        self.contain_position()
 
     def shapes(self) -> tuple[Shape, ...]:
         heading_radians = math.radians(

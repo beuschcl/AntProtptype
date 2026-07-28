@@ -240,7 +240,7 @@ def test_world_sensing_excludes_distant_entity() -> None:
     ant.x = 0
     ant.y = 0
     food.x = settings.WORLD_WIDTH
-    food.y = settings.SCREEN_HEIGHT
+    food.y = settings.WORLD_HEIGHT
 
     discovered = world.sense_for(ant)
 

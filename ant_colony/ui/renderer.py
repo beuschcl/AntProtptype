@@ -13,6 +13,7 @@ from ant_colony.graphics.primitives import (
     Polygon,
     Shape,
 )
+from ant_colony.ui.window_layout import WindowLayout
 from ant_colony.world import World
 
 logger = logging.getLogger(__name__)
@@ -30,20 +31,11 @@ class Renderer:
     ) -> None:
         self.screen = screen
         self.camera = camera
-        self.world_viewport = self.screen.subsurface(
-            (
-                0,
-                0,
-                settings.WORLD_WIDTH,
-                settings.WORLD_HEIGHT,
-            )
-        )
         self.world_background = self._load_world_background()
+        self._scaled_background = self.world_background
+        self._scaled_background_size = self.world_background.get_size()
         self._world_clip_rect = pygame.Rect(
-            0,
-            0,
-            settings.WORLD_WIDTH,
-            settings.WORLD_HEIGHT,
+            0, 0, settings.WORLD_WIDTH, settings.WORLD_HEIGHT
         )
         self.show_grid = False
         self.show_hitboxes = False
@@ -52,9 +44,27 @@ class Renderer:
             pygame.font.init()
         self.debug_font = pygame.font.SysFont(None, 18)
 
-    def draw(self, world: World) -> None:
+    def set_screen(self, screen: pygame.Surface) -> None:
+        self.screen = screen
+
+    def draw(
+        self,
+        world: World,
+        layout: WindowLayout | None = None,
+    ) -> None:
+        if layout is None:
+            layout = WindowLayout.calculate(
+                self.screen.get_size(),
+                settings.INSPECTOR_WIDTH,
+            )
+        self._world_clip_rect = layout.world_viewport
+        self.camera.fit(
+            layout.world_viewport,
+            (settings.WORLD_WIDTH, settings.WORLD_HEIGHT),
+        )
         self.screen.fill(settings.BACKGROUND_COLOR)
-        self.world_viewport.blit(self.world_background, (0, 0))
+        background = self._background_for(layout.world_viewport.size)
+        self.screen.blit(background, layout.world_viewport.topleft)
         cursor_screen = self._cursor_screen_position()
         cursor_world: tuple[float, float] | None
         if cursor_screen is None:
@@ -98,7 +108,7 @@ class Renderer:
             )
 
         self.screen.set_clip(None)
-        self._draw_inspector_divider()
+        self._draw_inspector_divider(layout)
 
     def handle_event(self, event: pygame.event.Event) -> None:
         if event.type != pygame.KEYDOWN:
@@ -201,8 +211,8 @@ class Renderer:
             pygame.draw.line(
                 self.screen,
                 settings.DEBUG_GRID_COLOR,
-                (screen_x, 0),
-                (screen_x, settings.SCREEN_HEIGHT),
+                (screen_x, self._world_clip_rect.top),
+                (screen_x, self._world_clip_rect.bottom),
             )
 
         for y in range(
@@ -214,8 +224,8 @@ class Renderer:
             pygame.draw.line(
                 self.screen,
                 settings.DEBUG_GRID_COLOR,
-                (0, screen_y),
-                (settings.SCREEN_WIDTH, screen_y),
+                (self._world_clip_rect.left, screen_y),
+                (self._world_clip_rect.right, screen_y),
             )
 
     def _draw_hitboxes(self, world: World) -> None:
@@ -265,8 +275,8 @@ class Renderer:
         )
         self._draw_debug_text(
             cursor_label,
-            10,
-            settings.SCREEN_HEIGHT - 24,
+            self._world_clip_rect.left + 10,
+            self._world_clip_rect.bottom - 24,
         )
 
         for x in range(
@@ -336,13 +346,27 @@ class Renderer:
         except pygame.error:
             return False
 
-    def _draw_inspector_divider(self) -> None:
-        pygame.draw.line(
+    def _draw_inspector_divider(
+        self,
+        layout: WindowLayout,
+    ) -> None:
+        pygame.draw.rect(
             self.screen,
             settings.INSPECTOR_DIVIDER_COLOR,
-            (settings.WORLD_WIDTH, 0),
-            (settings.WORLD_WIDTH, settings.SCREEN_HEIGHT),
+            layout.divider_rect,
         )
+
+    def _background_for(
+        self,
+        size: tuple[int, int],
+    ) -> pygame.Surface:
+        if size != self._scaled_background_size:
+            self._scaled_background = pygame.transform.smoothscale(
+                self.world_background,
+                size,
+            )
+            self._scaled_background_size = size
+        return self._scaled_background
 
     @staticmethod
     def _load_world_background() -> pygame.Surface:

@@ -4,6 +4,7 @@ from ant_colony.config import settings
 from ant_colony.ui.inspector_snapshot import (
     InspectorSnapshot,
 )
+from ant_colony.ui.window_layout import WindowLayout
 from ant_colony.world import World
 
 
@@ -24,10 +25,15 @@ class Inspector:
         self,
         screen: pygame.Surface,
         world: World,
+        layout: WindowLayout | None = None,
     ) -> None:
         snapshot = InspectorSnapshot.from_world(world)
 
-        x = settings.WORLD_WIDTH + self.LEFT_PADDING
+        x = (
+            layout.inspector_rect.x
+            if layout is not None
+            else settings.WORLD_WIDTH
+        ) + self.LEFT_PADDING
         y = self.TOP_PADDING
 
         y = self._draw_lines(

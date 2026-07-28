@@ -11,6 +11,12 @@ from ant_colony.ui.window_layout import WindowController
 from ant_colony.world import World
 
 
+def _maybe_update_world(world: World, restarted: bool) -> None:
+    """Advance the world by one tick if it is neither complete nor freshly restarted."""
+    if not world.is_complete and not restarted:
+        world.update()
+
+
 def main() -> None:
     pygame.init()
 
@@ -80,8 +86,7 @@ def main() -> None:
                         world_position
                     )
 
-            if not world.is_complete and not world_restarted:
-                world.update()
+            _maybe_update_world(world, world_restarted)
 
             layout = window.layout(screen)
             renderer.draw(world, layout)

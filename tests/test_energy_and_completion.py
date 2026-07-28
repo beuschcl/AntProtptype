@@ -871,23 +871,23 @@ def test_initial_ants_start_at_nest_and_pay_on_first_departure() -> None:
 
 
 def test_restart_skips_world_update_on_same_frame() -> None:
-    """A fresh world created by Start Over must not be updated in the restart frame.
+    """_maybe_update_world with restarted=True must not advance the fresh world.
 
     The first rendered frame after restart must show exactly the initial state:
     ants at the nest, full energy and hydration, zero nest reserve, no selection,
     and no stale pheromones, memories, or completion state.
     """
+    from ant_colony.main import _maybe_update_world
+
     seed = 99
-    world_restarted = True
     world_new = World(rng=random.Random(seed))
 
     # Record the pristine initial state before any update.
     initial_energy = [ant.energy.current for ant in world_new.ants]
     initial_hydration = [ant.hydration.current for ant in world_new.ants]
 
-    # Simulate main.py's guard: `if not world.is_complete and not world_restarted`
-    if not world_new.is_complete and not world_restarted:
-        world_new.update()  # must NOT execute on restart frame
+    # Call the production helper with restarted=True — world must not advance.
+    _maybe_update_world(world_new, restarted=True)
 
     # State must be identical to the moment of construction — no update ran.
     assert world_new.nest.food_reserve == 0
@@ -904,4 +904,39 @@ def test_restart_skips_world_update_on_same_frame() -> None:
             "ant hydration must be unchanged in restart frame"
         )
         assert not ant.on_excursion
+
+
+def test_maybe_update_world_advances_incomplete_world() -> None:
+    """_maybe_update_world with restarted=False advances an incomplete world."""
+    from ant_colony.main import _maybe_update_world
+
+    world = _seeded_world(seed=7)
+    initial_hydration = [ant.hydration.current for ant in world.ants]
+
+    _maybe_update_world(world, restarted=False)
+
+    # At least one ant's hydration must have decayed, proving update() ran.
+    post_hydration = [ant.hydration.current for ant in world.ants]
+    assert post_hydration != initial_hydration, (
+        "world.update() must have run, decaying ant hydration"
+    )
+
+
+def test_maybe_update_world_keeps_complete_world_paused() -> None:
+    """_maybe_update_world must not advance a world whose colony is complete."""
+    from ant_colony.main import _maybe_update_world
+
+    world = _seeded_world(seed=5)
+
+    # Force the completion flag directly so no 50-ant loop is needed.
+    world._colony_complete = True  # noqa: SLF001
+
+    initial_hydration = [ant.hydration.current for ant in world.ants]
+
+    _maybe_update_world(world, restarted=False)
+
+    post_hydration = [ant.hydration.current for ant in world.ants]
+    assert post_hydration == initial_hydration, (
+        "world.update() must not run when the colony is complete"
+    )
 

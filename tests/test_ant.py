@@ -29,7 +29,7 @@ def test_ant_starts_inside_world_bounds() -> None:
     ant = Ant(ant_id=1)
 
     assert 0 <= ant.x <= settings.WORLD_WIDTH
-    assert 0 <= ant.y <= settings.SCREEN_HEIGHT
+    assert 0 <= ant.y <= settings.WORLD_HEIGHT
 
 
 def test_ant_starts_wandering() -> None:
@@ -124,17 +124,43 @@ def test_ant_moves_toward_food_target() -> None:
     ant = Ant(ant_id=1)
     food = make_food(
         x=100,
-        y=0,
+        y=100,
     )
-    ant.x = 0
-    ant.y = 0
+    ant.x = 50
+    ant.y = 100
     ant.speed = 2
     ant.select_food_target(food)
 
     ant.update()
 
-    assert ant.x == 2
-    assert ant.y == 0
+    assert ant.x == 52
+    assert ant.y == 100
+
+
+def test_wandering_ant_reflects_at_world_boundary() -> None:
+    ant = Ant(ant_id=1)
+    ant.x = settings.WORLD_WIDTH - settings.ANT_BOUNDARY_PADDING
+    ant.y = 100
+    ant.speed = 2
+    ant.heading = 0
+
+    ant.wander()
+
+    assert ant.x == settings.WORLD_WIDTH - settings.ANT_BOUNDARY_PADDING
+    assert ant.y == 100
+    assert 90 < ant.heading < 270
+
+
+def test_ant_body_remains_inside_every_world_boundary() -> None:
+    ant = Ant(ant_id=1)
+    ant.x = -100
+    ant.y = settings.WORLD_HEIGHT + 100
+    ant.heading = 45
+
+    ant.contain_position()
+
+    assert ant.x == settings.ANT_BOUNDARY_PADDING
+    assert ant.y == settings.WORLD_HEIGHT - settings.ANT_BOUNDARY_PADDING
 
 
 def test_ant_collects_food_in_range() -> None:

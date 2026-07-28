@@ -219,7 +219,7 @@ def test_renderer_draws_camera_transformed_grid_lines(
     )
     assert any(
         start == (0, expected_y)
-        and end == (settings.SCREEN_WIDTH, expected_y)
+        and end == (settings.WORLD_WIDTH, expected_y)
         for start, end in lines
     )
 

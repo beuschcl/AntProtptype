@@ -48,7 +48,7 @@ def test_every_food_source_is_inside_world_bounds() -> None:
         assert food.x - settings.FOOD_RADIUS >= 0
         assert food.x + settings.FOOD_RADIUS <= settings.WORLD_WIDTH
         assert food.y - settings.FOOD_RADIUS >= 0
-        assert food.y + settings.FOOD_RADIUS <= settings.SCREEN_HEIGHT
+        assert food.y + settings.FOOD_RADIUS <= settings.WORLD_HEIGHT
 
 
 def test_initial_food_ids_are_unique() -> None:

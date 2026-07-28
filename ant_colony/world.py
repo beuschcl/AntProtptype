@@ -292,7 +292,7 @@ class World:
         )
         y = self._rng.uniform(
             settings.FOOD_RADIUS,
-            settings.SCREEN_HEIGHT - settings.FOOD_RADIUS,
+            settings.WORLD_HEIGHT - settings.FOOD_RADIUS,
         )
 
         return Food(
@@ -396,7 +396,7 @@ class World:
             0 <= x <= settings.WORLD_WIDTH
             and 0
             <= y
-            <= settings.SCREEN_HEIGHT
+            <= settings.WORLD_HEIGHT
         )
 
     def __repr__(self) -> str:

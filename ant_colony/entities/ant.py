@@ -30,12 +30,12 @@ class Ant(Entity):
         ant_id: int,
         rng: _random_module.Random | None = None,
     ) -> None:
-        _rng = rng if rng is not None else _random_module
-        x = _rng.uniform(
+        self._rng = rng if rng is not None else _random_module
+        x = self._rng.uniform(
             settings.ANT_BOUNDARY_PADDING,
             settings.WORLD_WIDTH - settings.ANT_BOUNDARY_PADDING,
         )
-        y = _rng.uniform(
+        y = self._rng.uniform(
             settings.ANT_BOUNDARY_PADDING,
             settings.WORLD_HEIGHT - settings.ANT_BOUNDARY_PADDING,
         )
@@ -47,11 +47,11 @@ class Ant(Entity):
             discoverable_radius=(settings.ANT_DISCOVERABLE_RADIUS),
         )
 
-        self.speed = _rng.uniform(
+        self.speed = self._rng.uniform(
             settings.ANT_MIN_SPEED,
             settings.ANT_MAX_SPEED,
         )
-        self.heading = _rng.uniform(
+        self.heading = self._rng.uniform(
             0,
             360,
         )
@@ -264,7 +264,7 @@ class Ant(Entity):
         self.x += math.cos(heading_radians) * self.speed
         self.y += math.sin(heading_radians) * self.speed
 
-        self.heading += _random_module.uniform(
+        self.heading += self._rng.uniform(
             -settings.ANT_TURN_SPEED,
             settings.ANT_TURN_SPEED,
         )

@@ -35,6 +35,7 @@ class World:
         self.selected_ant: Ant | None = None
         self._next_pheromone_id = 1
         self._next_food_id = 1
+        self._next_ant_id = settings.STARTING_ANTS
         self._update_count = 0
         self._rng = rng if rng is not None else _random_module.Random()
 
@@ -205,6 +206,7 @@ class World:
                 self._assign_food_target(ant, ())
 
         self._deposit_pheromones()
+        self._maybe_spawn_ant()
         self._remove_depleted_resources()
         self._remove_depleted_pheromones()
         self._update_count += 1
@@ -405,6 +407,20 @@ class World:
 
             self._next_pheromone_id += 1
 
+    def _maybe_spawn_ant(self) -> None:
+        if len(self.ants) >= settings.MAX_ANTS:
+            return
+
+        nest = self.nest
+        if not nest.consume(settings.ANT_SPAWN_FOOD_COST):
+            return
+
+        new_ant = Ant(self._next_ant_id)
+        self._next_ant_id += 1
+        new_ant.x = nest.x
+        new_ant.y = nest.y
+        self.add_entity(new_ant)
+
     def _spawn_food(self) -> Food:
         food_id = self._next_food_id
         self._next_food_id += 1
@@ -436,7 +452,13 @@ class World:
             if resource.is_depleted:
                 self.remove_entity(resource)
                 if isinstance(resource, Food):
-                    self.add_entity(self._spawn_food())
+                    if (
+                        len(self.food)
+                        < settings.STARTING_FOOD_SOURCES
+                    ):
+                        self.add_entity(
+                            self._spawn_food()
+                        )
 
     def _clear_resource_target_references(
         self,

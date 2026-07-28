@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from ant_colony.components import (
     AntState,
     FoodTargetSource,
+    HydrationNeed,
     Inventory,
     Senses,
 )
@@ -58,6 +59,9 @@ class Ant(Entity):
             capacity=settings.ANT_INVENTORY_CAPACITY
         )
         self.knowledge = Knowledge()
+        self.hydration = HydrationNeed(
+            maximum=settings.ANT_MAX_HYDRATION,
+        )
 
         self._food_target: Food | None = None
         self._food_target_source: FoodTargetSource | None = None
@@ -80,6 +84,9 @@ class Ant(Entity):
         return settings.ANT_RADIUS
 
     def update(self) -> None:
+        self.hydration.decay(
+            settings.ANT_HYDRATION_DECAY_PER_UPDATE
+        )
         if self.state == AntState.WANDERING:
             self.wander()
         elif self.state == AntState.SEEKING_FOOD:

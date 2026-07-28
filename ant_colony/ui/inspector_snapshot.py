@@ -30,6 +30,8 @@ class InspectorSnapshot:
     selected_ant_inventory_capacity: int | None = None
     selected_ant_knowledge_count: int | None = None
     selected_ant_target: str | None = None
+    selected_ant_hydration: float | None = None
+    selected_ant_hydration_max: float | None = None
 
     @classmethod
     def from_world(
@@ -90,6 +92,8 @@ class InspectorSnapshot:
             selected_ant_inventory_capacity=ant.inventory.capacity,
             selected_ant_knowledge_count=ant.knowledge.count(),
             selected_ant_target=cls._target_description(ant),
+            selected_ant_hydration=ant.hydration.current,
+            selected_ant_hydration_max=ant.hydration.maximum,
         )
 
     @staticmethod

@@ -137,4 +137,9 @@ class Inspector:
                 f"{snapshot.selected_ant_knowledge_count}"
             ),
             f"Target: {snapshot.selected_ant_target}",
+            (
+                "Hydration: "
+                f"{snapshot.selected_ant_hydration or 0:.1f}"
+                f"/{snapshot.selected_ant_hydration_max or 0:.1f}"
+            ),
         )

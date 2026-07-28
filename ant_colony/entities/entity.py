@@ -51,7 +51,10 @@ class Entity:
         *,
         padding: float = 0.0,
     ) -> bool:
-        return self.distance_to_position(x, y) <= self.hitbox_radius + padding
+        return (
+            self.distance_to_position(x, y)
+            <= self.hitbox_radius + padding
+        )
 
     def intersects_entity(
         self,
@@ -60,5 +63,7 @@ class Entity:
         padding: float = 0.0,
     ) -> bool:
         return self.distance_to(other) <= (
-            self.hitbox_radius + other.hitbox_radius + padding
+            self.hitbox_radius
+            + other.hitbox_radius
+            + padding
         )

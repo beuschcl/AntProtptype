@@ -16,4 +16,6 @@ class ResourcePortion:
 
     def __post_init__(self) -> None:
         if self.value <= 0:
-            raise ValueError("Resource value must be greater than zero.")
+            raise ValueError(
+                "Resource value must be greater than zero."
+            )

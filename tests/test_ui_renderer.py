@@ -15,7 +15,9 @@ def test_renderer_loads_and_scales_world_background_once(
     monkeypatch,
 ) -> None:
     loaded_surface = pygame.Surface((12, 12))
-    scaled_surface = pygame.Surface((settings.WORLD_WIDTH, settings.SCREEN_HEIGHT))
+    scaled_surface = pygame.Surface(
+        (settings.WORLD_WIDTH, settings.SCREEN_HEIGHT)
+    )
     calls: dict[str, object] = {}
 
     def fake_load(path: str) -> pygame.Surface:
@@ -62,12 +64,19 @@ def test_renderer_loads_and_scales_world_background_once(
         staticmethod(lambda: loaded_surface),
     )
 
-    screen = pygame.Surface((settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT))
+    screen = pygame.Surface(
+        (settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT)
+    )
     renderer = renderer_module.Renderer(screen, Camera())
 
     assert calls["package"] == "ant_colony"
-    assert fake_resource.joinpath_argument == renderer_module.WORLD_BACKGROUND_ASSET
-    assert Path(calls["path"]).name == Path(renderer_module.WORLD_BACKGROUND_ASSET).name
+    assert (
+        fake_resource.joinpath_argument
+        == renderer_module.WORLD_BACKGROUND_ASSET
+    )
+    assert Path(calls["path"]).name == Path(
+        renderer_module.WORLD_BACKGROUND_ASSET
+    ).name
     assert Path(calls["path"]).is_absolute()
     assert calls["surface"] is loaded_surface
     assert calls["size"] == (
@@ -80,7 +89,9 @@ def test_renderer_loads_and_scales_world_background_once(
 def test_renderer_loads_worker_sprite_from_package(
     monkeypatch,
 ) -> None:
-    background = pygame.Surface((settings.WORLD_WIDTH, settings.SCREEN_HEIGHT))
+    background = pygame.Surface(
+        (settings.WORLD_WIDTH, settings.SCREEN_HEIGHT)
+    )
     worker_sprite = pygame.Surface((24, 32), pygame.SRCALPHA)
     calls: dict[str, object] = {}
 
@@ -111,19 +122,25 @@ def test_renderer_loads_worker_sprite_from_package(
     monkeypatch.setattr(renderer_module, "as_file", fake_as_file)
     monkeypatch.setattr(pygame.image, "load", fake_load)
 
-    screen = pygame.Surface((settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT))
+    screen = pygame.Surface(
+        (settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT)
+    )
     renderer = renderer_module.Renderer(screen, Camera())
 
     assert calls["package"] == "ant_colony"
     assert calls["resource"] == renderer_module.ANT_WORKER_ASSET
-    assert Path(calls["path"]).name == Path(renderer_module.ANT_WORKER_ASSET).name
+    assert Path(calls["path"]).name == Path(
+        renderer_module.ANT_WORKER_ASSET
+    ).name
     assert renderer.ant_worker_sprite is worker_sprite
 
 
 def test_renderer_aligns_worker_head_with_ant_heading(
     monkeypatch,
 ) -> None:
-    background = pygame.Surface((settings.WORLD_WIDTH, settings.SCREEN_HEIGHT))
+    background = pygame.Surface(
+        (settings.WORLD_WIDTH, settings.SCREEN_HEIGHT)
+    )
     worker_sprite = pygame.Surface((24, 32), pygame.SRCALPHA)
     monkeypatch.setattr(
         renderer_module.Renderer,
@@ -136,7 +153,9 @@ def test_renderer_aligns_worker_head_with_ant_heading(
         staticmethod(lambda: worker_sprite),
     )
 
-    screen = pygame.Surface((settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT))
+    screen = pygame.Surface(
+        (settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT)
+    )
     renderer = renderer_module.Renderer(screen, Camera())
     world = World()
     ant = world.ants[0]
@@ -168,7 +187,9 @@ def test_renderer_draws_background_only_in_world_viewport(
     monkeypatch,
 ) -> None:
     world_background_color = (11, 22, 33)
-    background = pygame.Surface((settings.WORLD_WIDTH, settings.SCREEN_HEIGHT))
+    background = pygame.Surface(
+        (settings.WORLD_WIDTH, settings.SCREEN_HEIGHT)
+    )
     background.fill(world_background_color)
 
     monkeypatch.setattr(
@@ -177,7 +198,9 @@ def test_renderer_draws_background_only_in_world_viewport(
         staticmethod(lambda: background),
     )
 
-    screen = pygame.Surface((settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT))
+    screen = pygame.Surface(
+        (settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT)
+    )
     renderer = renderer_module.Renderer(screen, Camera())
     world = SimpleNamespace(
         entities=(),
@@ -189,7 +212,8 @@ def test_renderer_draws_background_only_in_world_viewport(
 
     assert screen.get_at((10, 10))[:3] == world_background_color
     assert (
-        screen.get_at((settings.WORLD_WIDTH + 10, 10))[:3] == settings.BACKGROUND_COLOR
+        screen.get_at((settings.WORLD_WIDTH + 10, 10))[:3]
+        == settings.BACKGROUND_COLOR
     )
     assert (
         screen.get_at((settings.WORLD_WIDTH, 10))[:3]
@@ -209,18 +233,24 @@ def test_renderer_uses_fallback_when_background_load_fails(
         raise_file_not_found,
     )
 
-    screen = pygame.Surface((settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT))
+    screen = pygame.Surface(
+        (settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT)
+    )
     renderer = renderer_module.Renderer(screen, Camera())
 
     assert renderer.world_background.get_size() == (
         settings.WORLD_WIDTH,
         settings.SCREEN_HEIGHT,
     )
-    assert renderer.world_background.get_at((0, 0))[:3] == (settings.BACKGROUND_COLOR)
+    assert renderer.world_background.get_at((0, 0))[:3] == (
+        settings.BACKGROUND_COLOR
+    )
 
 
 def test_renderer_toggles_grid_hitboxes_and_radii_independently() -> None:
-    screen = pygame.Surface((settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT))
+    screen = pygame.Surface(
+        (settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT)
+    )
     renderer = renderer_module.Renderer(screen, Camera())
 
     renderer.handle_event(
@@ -260,7 +290,9 @@ def test_renderer_toggles_grid_hitboxes_and_radii_independently() -> None:
 def test_renderer_draws_camera_transformed_grid_lines(
     monkeypatch,
 ) -> None:
-    screen = pygame.Surface((settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT))
+    screen = pygame.Surface(
+        (settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT)
+    )
     camera = Camera()
     camera.x = 50
     camera.y = 25
@@ -283,11 +315,13 @@ def test_renderer_draws_camera_transformed_grid_lines(
     expected_x, _ = camera.world_to_screen(100, 0)
     _, expected_y = camera.world_to_screen(0, 100)
     assert any(
-        start == (expected_x, 0) and end == (expected_x, settings.SCREEN_HEIGHT)
+        start == (expected_x, 0)
+        and end == (expected_x, settings.SCREEN_HEIGHT)
         for start, end in lines
     )
     assert any(
-        start == (0, expected_y) and end == (settings.WORLD_WIDTH, expected_y)
+        start == (0, expected_y)
+        and end == (settings.WORLD_WIDTH, expected_y)
         for start, end in lines
     )
 
@@ -295,7 +329,9 @@ def test_renderer_draws_camera_transformed_grid_lines(
 def test_renderer_debug_overlays_stay_in_world_viewport(
     monkeypatch,
 ) -> None:
-    screen = pygame.Surface((settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT))
+    screen = pygame.Surface(
+        (settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT)
+    )
     renderer = renderer_module.Renderer(screen, Camera())
     renderer.show_grid = True
     renderer.show_hitboxes = True
@@ -310,14 +346,17 @@ def test_renderer_debug_overlays_stay_in_world_viewport(
     renderer.draw(world)
 
     assert (
-        screen.get_at((settings.WORLD_WIDTH + 20, 20))[:3] == settings.BACKGROUND_COLOR
+        screen.get_at((settings.WORLD_WIDTH + 20, 20))[:3]
+        == settings.BACKGROUND_COLOR
     )
 
 
 def test_renderer_does_not_mutate_world_state(
     monkeypatch,
 ) -> None:
-    screen = pygame.Surface((settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT))
+    screen = pygame.Surface(
+        (settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT)
+    )
     renderer = renderer_module.Renderer(screen, Camera())
     renderer.show_hitboxes = True
     world = World()
@@ -336,7 +375,9 @@ def test_renderer_does_not_mutate_world_state(
 def test_renderer_draws_hover_radii_only_when_r_enabled(
     monkeypatch,
 ) -> None:
-    screen = pygame.Surface((settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT))
+    screen = pygame.Surface(
+        (settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT)
+    )
     renderer = renderer_module.Renderer(screen, Camera())
     renderer.show_radius_overlays = True
     world = World()
@@ -375,7 +416,9 @@ def test_renderer_draws_hover_radii_only_when_r_enabled(
 def test_renderer_h_toggle_does_not_draw_hover_radii(
     monkeypatch,
 ) -> None:
-    screen = pygame.Surface((settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT))
+    screen = pygame.Surface(
+        (settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT)
+    )
     renderer = renderer_module.Renderer(screen, Camera())
     renderer.show_hitboxes = True
     world = World()
@@ -400,14 +443,17 @@ def test_renderer_h_toggle_does_not_draw_hover_radii(
         for circle in captured_circles
     )
     assert not any(
-        circle.color == settings.DEBUG_SENSE_RADIUS_COLOR for circle in captured_circles
+        circle.color == settings.DEBUG_SENSE_RADIUS_COLOR
+        for circle in captured_circles
     )
 
 
 def test_renderer_draws_coordinate_text_only_with_g_toggle(
     monkeypatch,
 ) -> None:
-    screen = pygame.Surface((settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT))
+    screen = pygame.Surface(
+        (settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT)
+    )
     renderer = renderer_module.Renderer(screen, Camera())
     world = World()
     world.ants[0].x = 100
@@ -438,7 +484,9 @@ def test_renderer_draws_coordinate_text_only_with_g_toggle(
 def test_renderer_transforms_grid_labels_with_camera(
     monkeypatch,
 ) -> None:
-    screen = pygame.Surface((settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT))
+    screen = pygame.Surface(
+        (settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT)
+    )
     camera = Camera()
     camera.x = 50
     camera.y = 25
@@ -454,8 +502,12 @@ def test_renderer_transforms_grid_labels_with_camera(
 
     renderer._draw_coordinate_overlay((150, 125))
 
-    expected_x, expected_x_screen_y = camera.world_to_screen(100, 0)
-    expected_y_screen_x, expected_y = camera.world_to_screen(0, 100)
+    expected_x, expected_x_screen_y = (
+        camera.world_to_screen(100, 0)
+    )
+    expected_y_screen_x, expected_y = (
+        camera.world_to_screen(0, 100)
+    )
     assert (
         "100",
         expected_x + 2,
@@ -471,7 +523,9 @@ def test_renderer_transforms_grid_labels_with_camera(
 def test_renderer_hides_cursor_coordinates_outside_world_viewport(
     monkeypatch,
 ) -> None:
-    screen = pygame.Surface((settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT))
+    screen = pygame.Surface(
+        (settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT)
+    )
     renderer = renderer_module.Renderer(screen, Camera())
     renderer.show_grid = True
     world = World()

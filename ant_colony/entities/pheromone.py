@@ -13,13 +13,17 @@ class Pheromone(Entity):
         strength: float = settings.PHEROMONE_INITIAL_STRENGTH,
     ) -> None:
         if strength <= 0:
-            raise ValueError("Pheromone strength must be greater than zero.")
+            raise ValueError(
+                "Pheromone strength must be greater than zero."
+            )
 
         super().__init__(
             entity_id=pheromone_id,
             x=x,
             y=y,
-            discoverable_radius=(settings.PHEROMONE_DISCOVERABLE_RADIUS),
+            discoverable_radius=(
+                settings.PHEROMONE_DISCOVERABLE_RADIUS
+            ),
         )
 
         self._strength = strength
@@ -44,14 +48,18 @@ class Pheromone(Entity):
     def update(self) -> None:
         self._strength = max(
             0,
-            self._strength - settings.PHEROMONE_EVAPORATION_RATE,
+            self._strength
+            - settings.PHEROMONE_EVAPORATION_RATE,
         )
 
     def shapes(self) -> tuple[Shape, ...]:
         if self.is_depleted:
             return ()
 
-        radius = settings.PHEROMONE_RADIUS * self._strength
+        radius = (
+            settings.PHEROMONE_RADIUS
+            * self._strength
+        )
 
         return (
             Circle(

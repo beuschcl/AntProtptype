@@ -167,7 +167,10 @@ def test_knowledge_can_be_iterated() -> None:
         (500, 350),
     )
 
-    memory_names = {memory.name for memory in knowledge}
+    memory_names = {
+        memory.name
+        for memory in knowledge
+    }
 
     assert memory_names == {
         "food_location",

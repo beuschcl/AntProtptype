@@ -32,5 +32,6 @@ def test_wheel_includes_visual_assets(
             in wheel_zip.namelist()
         )
         assert (
-            "ant_colony/assets/ants/meadow-ant-worker-2x2.png" in wheel_zip.namelist()
+            "ant_colony/assets/ants/meadow-ant-worker-2x2.png"
+            in wheel_zip.namelist()
         )

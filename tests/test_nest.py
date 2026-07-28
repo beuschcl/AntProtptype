@@ -20,7 +20,9 @@ def test_nest_starts_with_empty_food_reserve() -> None:
     assert outer_shape.width == 5
     assert outer_shape.color == settings.NEST_COLOR
     assert len(outer_shape.points) == 6
-    assert outer_shape.points[0] == pytest.approx((100 + settings.NEST_RADIUS, 100))
+    assert outer_shape.points[0] == pytest.approx(
+        (100 + settings.NEST_RADIUS, 100)
+    )
     assert outline_shape.width == 1
     assert outline_shape.color == settings.NEST_OUTLINE_COLOR
 

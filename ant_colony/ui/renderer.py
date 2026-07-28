@@ -18,7 +18,9 @@ from ant_colony.world import World
 
 logger = logging.getLogger(__name__)
 PACKAGE_NAME = "ant_colony"
-WORLD_BACKGROUND_ASSET = "assets/backgrounds/old-growth-forest-map.png"
+WORLD_BACKGROUND_ASSET = (
+    "assets/backgrounds/old-growth-forest-map.png"
+)
 ANT_WORKER_ASSET = "assets/ants/meadow-ant-worker-2x2.png"
 ANT_WORKER_NATIVE_HEADING = -90
 
@@ -72,8 +74,12 @@ class Renderer:
             cursor_world = None
             hovered_entity = None
         else:
-            cursor_world = self.camera.screen_to_world(*cursor_screen)
-            hovered_entity = world.entity_under_position(cursor_world)
+            cursor_world = self.camera.screen_to_world(
+                *cursor_screen
+            )
+            hovered_entity = world.entity_under_position(
+                cursor_world
+            )
 
         self.screen.set_clip(self._world_clip_rect)
 
@@ -85,7 +91,10 @@ class Renderer:
 
         if self.show_hitboxes:
             self._draw_hitboxes(world)
-        if self.show_radius_overlays and hovered_entity is not None:
+        if (
+            self.show_radius_overlays
+            and hovered_entity is not None
+        ):
             self._draw_hovered_radii(hovered_entity)
 
         if world.selected_ant is not None:
@@ -113,10 +122,15 @@ class Renderer:
         elif event.key == pygame.K_h:
             self.show_hitboxes = not self.show_hitboxes
         elif event.key == pygame.K_r:
-            self.show_radius_overlays = not self.show_radius_overlays
+            self.show_radius_overlays = (
+                not self.show_radius_overlays
+            )
 
     def _draw_entity(self, entity: Entity) -> None:
-        if isinstance(entity, Ant) and self.ant_worker_sprite is not None:
+        if (
+            isinstance(entity, Ant)
+            and self.ant_worker_sprite is not None
+        ):
             self._draw_ant(entity)
             return
 
@@ -127,11 +141,19 @@ class Renderer:
         if self.ant_worker_sprite is None:
             return
 
-        source_width, source_height = self.ant_worker_sprite.get_size()
-        target_height = self.camera.scale_length(settings.ANT_SPRITE_HEIGHT)
+        source_width, source_height = (
+            self.ant_worker_sprite.get_size()
+        )
+        target_height = self.camera.scale_length(
+            settings.ANT_SPRITE_HEIGHT
+        )
         target_width = max(
             1,
-            round(target_height * source_width / source_height),
+            round(
+                target_height
+                * source_width
+                / source_height
+            ),
         )
         scaled_sprite = pygame.transform.smoothscale(
             self.ant_worker_sprite,
@@ -201,7 +223,10 @@ class Renderer:
         )
 
     def _draw_polygon(self, polygon: Polygon) -> None:
-        points = [self.camera.world_to_screen(x, y) for x, y in polygon.points]
+        points = [
+            self.camera.world_to_screen(x, y)
+            for x, y in polygon.points
+        ]
 
         pygame.draw.polygon(
             self.screen,
@@ -214,7 +239,10 @@ class Renderer:
         selection_ring = Circle(
             x=entity.x,
             y=entity.y,
-            radius=(settings.ANT_RADIUS + settings.SELECTION_RING_PADDING),
+            radius=(
+                settings.ANT_RADIUS
+                + settings.SELECTION_RING_PADDING
+            ),
             color=settings.SELECTION_COLOR,
             width=settings.SELECTION_RING_WIDTH,
         )
@@ -289,7 +317,10 @@ class Renderer:
         self,
         cursor_world: tuple[float, float],
     ) -> None:
-        cursor_label = f"cursor: ({int(cursor_world[0])}, {int(cursor_world[1])})"
+        cursor_label = (
+            f"cursor: ({int(cursor_world[0])}, "
+            f"{int(cursor_world[1])})"
+        )
         self._draw_debug_text(
             cursor_label,
             self._world_clip_rect.left + 10,
@@ -351,8 +382,9 @@ class Renderer:
         self,
         cursor_screen: tuple[int, int],
     ) -> bool:
-        return self._mouse_is_focused() and self._world_clip_rect.collidepoint(
-            cursor_screen
+        return (
+            self._mouse_is_focused()
+            and self._world_clip_rect.collidepoint(cursor_screen)
         )
 
     @staticmethod
@@ -386,11 +418,17 @@ class Renderer:
 
     @staticmethod
     def _load_world_background() -> pygame.Surface:
-        background_resource = files(PACKAGE_NAME).joinpath(WORLD_BACKGROUND_ASSET)
-        attempted_location = f"{PACKAGE_NAME}/{WORLD_BACKGROUND_ASSET}"
+        background_resource = files(PACKAGE_NAME).joinpath(
+            WORLD_BACKGROUND_ASSET
+        )
+        attempted_location = (
+            f"{PACKAGE_NAME}/{WORLD_BACKGROUND_ASSET}"
+        )
         try:
             with as_file(background_resource) as background_path:
-                background = pygame.image.load(str(background_path))
+                background = pygame.image.load(
+                    str(background_path)
+                )
         except (
             FileNotFoundError,
             pygame.error,
@@ -420,11 +458,17 @@ class Renderer:
 
     @staticmethod
     def _load_ant_worker_sprite() -> pygame.Surface | None:
-        sprite_resource = files(PACKAGE_NAME).joinpath(ANT_WORKER_ASSET)
-        attempted_location = f"{PACKAGE_NAME}/{ANT_WORKER_ASSET}"
+        sprite_resource = files(PACKAGE_NAME).joinpath(
+            ANT_WORKER_ASSET
+        )
+        attempted_location = (
+            f"{PACKAGE_NAME}/{ANT_WORKER_ASSET}"
+        )
         try:
             with as_file(sprite_resource) as sprite_path:
-                return pygame.image.load(str(sprite_path))
+                return pygame.image.load(
+                    str(sprite_path)
+                )
         except (
             FileNotFoundError,
             pygame.error,

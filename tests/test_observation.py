@@ -12,7 +12,9 @@ def test_observation_is_created_from_entity() -> None:
         nutrition=5,
     )
 
-    observation = EntityObservation.from_entity(food)
+    observation = (
+        EntityObservation.from_entity(food)
+    )
 
     assert observation.entity_id == 7
     assert observation.entity_type == "food"
@@ -30,4 +32,7 @@ def test_observation_has_unique_memory_name() -> None:
         y=240,
     )
 
-    assert observation.memory_name == "entity:food:7"
+    assert (
+        observation.memory_name
+        == "entity:food:7"
+    )

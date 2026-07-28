@@ -16,7 +16,9 @@ class Nest(Entity):
             entity_id="nest",
             x=x,
             y=y,
-            discoverable_radius=(settings.NEST_DISCOVERABLE_RADIUS),
+            discoverable_radius=(
+                settings.NEST_DISCOVERABLE_RADIUS
+            ),
         )
 
         self._food_reserve = 0
@@ -39,16 +41,24 @@ class Nest(Entity):
         invalid_portions = tuple(
             portion
             for portion in deposited_portions
-            if portion.resource_type != ResourceType.FOOD
+            if portion.resource_type
+            != ResourceType.FOOD
         )
 
         if invalid_portions:
-            raise ValueError("The food reserve only accepts food portions.")
+            raise ValueError(
+                "The food reserve only accepts food portions."
+            )
 
-        nutrition = sum(portion.value for portion in deposited_portions)
+        nutrition = sum(
+            portion.value
+            for portion in deposited_portions
+        )
 
         self._food_reserve += nutrition
-        self._delivered_portions += len(deposited_portions)
+        self._delivered_portions += len(
+            deposited_portions
+        )
 
         return nutrition
 
@@ -69,8 +79,12 @@ class Nest(Entity):
     def shapes(self) -> tuple[Shape, ...]:
         points = tuple(
             (
-                self.x + math.cos(math.radians(angle)) * settings.NEST_RADIUS,
-                self.y + math.sin(math.radians(angle)) * settings.NEST_RADIUS,
+                self.x
+                + math.cos(math.radians(angle))
+                * settings.NEST_RADIUS,
+                self.y
+                + math.sin(math.radians(angle))
+                * settings.NEST_RADIUS,
             )
             for angle in range(0, 360, 60)
         )

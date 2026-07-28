@@ -22,13 +22,19 @@ class Resource(Entity):
         discoverable_radius: float,
     ) -> None:
         if value <= 0:
-            raise ValueError("Resource value must be greater than zero.")
+            raise ValueError(
+                "Resource value must be greater than zero."
+            )
 
         if quantity <= 0:
-            raise ValueError("Resource quantity must be greater than zero.")
+            raise ValueError(
+                "Resource quantity must be greater than zero."
+            )
 
         if radius <= 0:
-            raise ValueError("Resource radius must be greater than zero.")
+            raise ValueError(
+                "Resource radius must be greater than zero."
+            )
 
         super().__init__(
             entity_id=resource_id,

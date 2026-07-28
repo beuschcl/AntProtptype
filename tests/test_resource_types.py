@@ -73,7 +73,10 @@ def test_building_material_configuration() -> None:
         quantity=2,
     )
 
-    assert material.resource_type is ResourceType.BUILDING_MATERIAL
+    assert (
+        material.resource_type
+        is ResourceType.BUILDING_MATERIAL
+    )
     assert material.construction_value == 3
     fill_shape, outline_shape = material.shapes()
 
@@ -86,8 +89,14 @@ def test_building_material_configuration() -> None:
     )
     assert fill_shape.color == settings.BUILDING_MATERIAL_COLOR
     assert outline_shape.width == 2
-    assert outline_shape.color == settings.BUILDING_MATERIAL_OUTLINE_COLOR
+    assert (
+        outline_shape.color
+        == settings.BUILDING_MATERIAL_OUTLINE_COLOR
+    )
     portion = material.collect()
 
     assert portion is not None
-    assert portion.resource_type is ResourceType.BUILDING_MATERIAL
+    assert (
+        portion.resource_type
+        is ResourceType.BUILDING_MATERIAL
+    )

@@ -397,9 +397,7 @@ def test_snapshot_includes_selected_ant_hydration() -> None:
 
     snapshot = InspectorSnapshot.from_world(world)
 
-    assert snapshot.selected_ant_hydration == pytest.approx(
-        settings.ANT_MAX_HYDRATION
-    )
+    assert snapshot.selected_ant_hydration == pytest.approx(settings.ANT_MAX_HYDRATION)
     assert snapshot.selected_ant_hydration_max == pytest.approx(
         settings.ANT_MAX_HYDRATION
     )
@@ -423,16 +421,10 @@ def test_inspector_selected_ant_lines_include_hydration() -> None:
     snapshot = InspectorSnapshot.from_world(world)
     lines = Inspector._selected_ant_lines(snapshot)
 
-    hydration_lines = [
-        line for line in lines if line.startswith("Hydration:")
-    ]
+    hydration_lines = [line for line in lines if line.startswith("Hydration:")]
     assert len(hydration_lines) == 1
     # Must show one decimal place
-    expected = (
-        f"Hydration: "
-        f"{ant.hydration.current:.1f}"
-        f"/{ant.hydration.maximum:.1f}"
-    )
+    expected = f"Hydration: {ant.hydration.current:.1f}/{ant.hydration.maximum:.1f}"
     assert hydration_lines[0] == expected
 
 
@@ -446,9 +438,7 @@ def test_inspector_hydration_format_one_decimal_place() -> None:
     snapshot = InspectorSnapshot.from_world(world)
     lines = Inspector._selected_ant_lines(snapshot)
 
-    hydration_line = next(
-        line for line in lines if line.startswith("Hydration:")
-    )
+    hydration_line = next(line for line in lines if line.startswith("Hydration:"))
     # Format: "Hydration: X.X/Y.Y"
     _, values_part = hydration_line.split(": ", 1)
     current_str, max_str = values_part.split("/")
@@ -456,3 +446,35 @@ def test_inspector_hydration_format_one_decimal_place() -> None:
     assert len(current_str.split(".")[1]) == 1
     assert "." in max_str
     assert len(max_str.split(".")[1]) == 1
+
+
+# ---------------------------------------------------------------------------
+# HydrationNeed — negative-input validation
+# ---------------------------------------------------------------------------
+
+
+def test_hydration_init_rejects_negative_maximum() -> None:
+    with pytest.raises(ValueError, match="negative"):
+        HydrationNeed(maximum=-1.0)
+
+
+def test_hydration_decay_rejects_negative_amount() -> None:
+    need = HydrationNeed(maximum=100.0)
+    need.decay(10.0)  # move away from maximum so state is observable
+    state_before = need.current
+
+    with pytest.raises(ValueError, match="negative"):
+        need.decay(-5.0)
+
+    assert need.current == state_before
+
+
+def test_hydration_restore_rejects_negative_amount() -> None:
+    need = HydrationNeed(maximum=100.0)
+    need.decay(10.0)  # bring below maximum so a restore would be visible
+    state_before = need.current
+
+    with pytest.raises(ValueError, match="negative"):
+        need.restore(-5.0)
+
+    assert need.current == state_before

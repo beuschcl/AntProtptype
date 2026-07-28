@@ -35,7 +35,9 @@ class World:
         self.selected_ant: Ant | None = None
         self._next_pheromone_id = 1
         self._next_food_id = 1
+        self._next_ant_id = settings.STARTING_ANTS
         self._update_count = 0
+        self._colony_complete = False
         self._rng = rng if rng is not None else _random_module.Random()
 
         self.add_entity(
@@ -45,12 +47,14 @@ class World:
             )
         )
 
+        nest = self.nest
         for ant_id in range(
             settings.STARTING_ANTS
         ):
-            self.add_entity(
-                Ant(ant_id)
-            )
+            ant = Ant(ant_id, rng=self._rng)
+            ant.x = nest.x
+            ant.y = nest.y
+            self.add_entity(ant)
 
         for _ in range(settings.STARTING_FOOD_SOURCES):
             self.add_entity(self._spawn_food())
@@ -116,6 +120,11 @@ class World:
             )
 
         return nests[0]
+
+    @property
+    def is_complete(self) -> bool:
+        """True once the colony has reached ``MAX_ANTS`` for the first time."""
+        return self._colony_complete
 
     def add_entity(
         self,
@@ -183,6 +192,9 @@ class World:
         return discovered_entities
 
     def update(self) -> None:
+        if self._colony_complete:
+            return
+
         for ant in self.ants:
             discovered_entities = self.sense_for(ant)
 
@@ -194,17 +206,29 @@ class World:
             self._assign_nest_target(ant)
 
         for entity in tuple(self._entities):
-            entity.update()
+            if not isinstance(entity, Ant):
+                entity.update()
 
+        for ant in self.ants:
+            self._update_ant_movement(ant)
+
+        just_deposited: list[Ant] = []
         for ant in self.ants:
             self._collect_food_for(ant)
             self._assign_nest_target(ant)
             deposited_nutrition = self._deposit_food_for(ant)
-
             if deposited_nutrition > 0:
-                self._assign_food_target(ant, ())
+                just_deposited.append(ant)
 
         self._deposit_pheromones()
+        self._process_upkeep()
+
+        # Process post-deposit return-trip selection in ascending ID order to
+        # keep the behaviour deterministic regardless of deposit order.
+        for ant in sorted(just_deposited, key=lambda a: a.id):
+            self._assign_food_target(ant, ())
+
+        self._maybe_spawn_ant()
         self._remove_depleted_resources()
         self._remove_depleted_pheromones()
         self._update_count += 1
@@ -220,6 +244,25 @@ class World:
         if not ant.inventory.is_empty:
             return
 
+        target, source = self._find_food_target(ant, discovered_entities)
+
+        if target is None:
+            return
+
+        # If the ant is leaving the nest for the first time (or again
+        # after returning), charge the one-time excursion energy cost.
+        if not ant.on_excursion and not ant.depart():
+            # Insufficient energy — keep the ant at the nest.
+            return
+
+        ant.select_food_target(target, source=source)
+
+    def _find_food_target(
+        self,
+        ant: Ant,
+        discovered_entities: tuple[Entity, ...],
+    ) -> tuple[Food | None, FoodTargetSource]:
+        """Return the best food target and its source without side-effects."""
         discovered_food = tuple(
             entity
             for entity in discovered_entities
@@ -235,11 +278,7 @@ class World:
                     food.id,
                 ),
             )
-            ant.select_food_target(
-                closest_food,
-                source=FoodTargetSource.DISCOVERY,
-            )
-            return
+            return closest_food, FoodTargetSource.DISCOVERY
 
         pheromone_food = self._food_from_pheromones(
             ant,
@@ -247,19 +286,14 @@ class World:
         )
 
         if pheromone_food is not None:
-            ant.select_food_target(
-                pheromone_food,
-                source=FoodTargetSource.PHEROMONE,
-            )
-            return
+            return pheromone_food, FoodTargetSource.PHEROMONE
 
         remembered_food = self._remembered_food_for(ant)
 
         if remembered_food is not None:
-            ant.select_food_target(
-                remembered_food,
-                source=FoodTargetSource.MEMORY,
-            )
+            return remembered_food, FoodTargetSource.MEMORY
+
+        return None, FoodTargetSource.DISCOVERY
 
     def _food_from_pheromones(
         self,
@@ -357,7 +391,10 @@ class World:
         if ant.nest_target is None:
             return 0
 
-        return ant.deposit_into(self.nest)
+        deposited = ant.deposit_into(self.nest)
+        if deposited > 0:
+            ant.arrive()
+        return deposited
     
     def _collect_food_for(
         self,
@@ -405,6 +442,66 @@ class World:
 
             self._next_pheromone_id += 1
 
+    def _update_ant_movement(self, ant: Ant) -> None:
+        """Move an ant for one tick, gating wandering departure on nest proximity.
+
+        A wandering ant that is physically at the nest must pay the one-time
+        excursion cost before it can leave.  If it cannot afford to depart,
+        only hydration decay runs and movement is suppressed this tick.
+        """
+        nest = self.nest
+        at_nest = ant.intersects_entity(
+            nest,
+            padding=settings.ANT_INTERACTION_RADIUS,
+        )
+
+        if at_nest and not ant.on_excursion and ant.state == AntState.WANDERING:
+            if not ant.depart():
+                # Insufficient energy — decay hydration only, no movement.
+                ant.hydration.decay(settings.ANT_HYDRATION_DECAY_PER_UPDATE)
+                return
+
+        ant.update()
+
+    def _process_upkeep(self) -> None:
+        """Refuel ants physically at the nest in ascending ID order.
+
+        An ant must be (a) spatially within the nest interaction boundary and
+        (b) not currently on an excursion to be eligible for refuelling.
+        Each 10-energy increment costs 1 nutrition from the nest reserve.
+        Colony upkeep has priority over spawning.
+        """
+        nest = self.nest
+        for ant in sorted(self.ants, key=lambda a: a.id):
+            if ant.on_excursion:
+                continue
+            if not ant.intersects_entity(
+                nest,
+                padding=settings.ANT_INTERACTION_RADIUS,
+            ):
+                continue
+            while not ant.energy.is_full:
+                if not nest.consume(settings.ANT_REFUEL_FOOD_COST):
+                    break
+                ant.energy.restore(settings.ANT_REFUEL_ENERGY_AMOUNT)
+
+    def _maybe_spawn_ant(self) -> None:
+        if len(self.ants) >= settings.MAX_ANTS:
+            return
+
+        nest = self.nest
+        if not nest.consume(settings.ANT_SPAWN_FOOD_COST):
+            return
+
+        new_ant = Ant(self._next_ant_id, rng=self._rng)
+        self._next_ant_id += 1
+        new_ant.x = nest.x
+        new_ant.y = nest.y
+        self.add_entity(new_ant)
+
+        if len(self.ants) >= settings.MAX_ANTS:
+            self._colony_complete = True
+
     def _spawn_food(self) -> Food:
         food_id = self._next_food_id
         self._next_food_id += 1
@@ -435,8 +532,13 @@ class World:
         for resource in self.resources:
             if resource.is_depleted:
                 self.remove_entity(resource)
+                # After removing the depleted source, replace it only if
+                # the active count is still below the cap.  len(self.food)
+                # is evaluated post-removal so the check is intentionally
+                # against the already-reduced count.
                 if isinstance(resource, Food):
-                    self.add_entity(self._spawn_food())
+                    if len(self.food) < settings.STARTING_FOOD_SOURCES:
+                        self.add_entity(self._spawn_food())
 
     def _clear_resource_target_references(
         self,

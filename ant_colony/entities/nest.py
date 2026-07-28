@@ -62,6 +62,16 @@ class Nest(Entity):
 
         return nutrition
 
+    def consume(self, cost: int) -> bool:
+        if cost < 0:
+            raise ValueError("Food cost must not be negative.")
+
+        if self._food_reserve < cost:
+            return False
+
+        self._food_reserve -= cost
+        return True
+
     @property
     def hitbox_radius(self) -> float:
         return settings.NEST_RADIUS

@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import math
-import random
+import random as _random_module
 from typing import TYPE_CHECKING
 
 from ant_colony.components import (
     AntState,
+    EnergyNeed,
     FoodTargetSource,
+    HydrationNeed,
     Inventory,
     Senses,
 )
@@ -24,12 +26,17 @@ if TYPE_CHECKING:
 
 
 class Ant(Entity):
-    def __init__(self, ant_id: int) -> None:
-        x = random.uniform(
+    def __init__(
+        self,
+        ant_id: int,
+        rng: _random_module.Random | None = None,
+    ) -> None:
+        self._rng = rng if rng is not None else _random_module.Random()
+        x = self._rng.uniform(
             settings.ANT_BOUNDARY_PADDING,
             settings.WORLD_WIDTH - settings.ANT_BOUNDARY_PADDING,
         )
-        y = random.uniform(
+        y = self._rng.uniform(
             settings.ANT_BOUNDARY_PADDING,
             settings.WORLD_HEIGHT - settings.ANT_BOUNDARY_PADDING,
         )
@@ -43,11 +50,11 @@ class Ant(Entity):
             ),
         )
 
-        self.speed = random.uniform(
+        self.speed = self._rng.uniform(
             settings.ANT_MIN_SPEED,
             settings.ANT_MAX_SPEED,
         )
-        self.heading = random.uniform(
+        self.heading = self._rng.uniform(
             0,
             360,
         )
@@ -58,7 +65,12 @@ class Ant(Entity):
             capacity=settings.ANT_INVENTORY_CAPACITY
         )
         self.knowledge = Knowledge()
+        self.hydration = HydrationNeed(
+            maximum=settings.ANT_MAX_HYDRATION,
+        )
+        self.energy = EnergyNeed(maximum=settings.ANT_MAX_ENERGY)
 
+        self._on_excursion: bool = False
         self._food_target: Food | None = None
         self._food_target_source: FoodTargetSource | None = None
         self._nest_target: Nest | None = None
@@ -76,10 +88,32 @@ class Ant(Entity):
         return self._nest_target
 
     @property
+    def on_excursion(self) -> bool:
+        """True while the ant is away from the nest on a field trip."""
+        return self._on_excursion
+
+    def depart(self) -> bool:
+        """Charge excursion energy and mark the ant as departed.
+
+        Returns ``True`` if the ant had enough energy and the departure
+        was recorded.  Returns ``False`` (no-op) if energy is
+        insufficient.
+        """
+        if self.energy.spend(settings.ANT_EXCURSION_ENERGY_COST):
+            self._on_excursion = True
+            return True
+        return False
+
+    def arrive(self) -> None:
+        """Mark the ant as returned to the nest."""
+        self._on_excursion = False
+
+    @property
     def hitbox_radius(self) -> float:
         return settings.ANT_RADIUS
 
     def update(self) -> None:
+        self.hydration.decay(settings.ANT_HYDRATION_DECAY_PER_UPDATE)
         if self.state == AntState.WANDERING:
             self.wander()
         elif self.state == AntState.SEEKING_FOOD:
@@ -284,7 +318,7 @@ class Ant(Entity):
             * self.speed
         )
 
-        self.heading += random.uniform(
+        self.heading += self._rng.uniform(
             -settings.ANT_TURN_SPEED,
             settings.ANT_TURN_SPEED,
         )

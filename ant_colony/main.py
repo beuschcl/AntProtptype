@@ -1,17 +1,27 @@
+import random as _random_module
+
 import pygame
 
 from ant_colony.config import settings
 from ant_colony.graphics.camera import Camera
+from ant_colony.ui.completion_overlay import CompletionOverlay
 from ant_colony.ui.inspector import Inspector
 from ant_colony.ui.renderer import Renderer
 from ant_colony.ui.window_layout import WindowController
 from ant_colony.world import World
 
 
+def _maybe_update_world(world: World, restarted: bool) -> None:
+    """Advance the world by one tick if it is neither complete nor freshly restarted."""
+    if not world.is_complete and not restarted:
+        world.update()
+
+
 def main() -> None:
     pygame.init()
 
     try:
+        world_seed = _random_module.randrange(2**32)
         window = WindowController()
         screen = window.create_screen()
 
@@ -21,20 +31,29 @@ def main() -> None:
 
         clock = pygame.time.Clock()
         camera = Camera()
-        world = World()
+        world = World(rng=_random_module.Random(world_seed))
         renderer = Renderer(
             screen,
             camera,
         )
         inspector = Inspector()
+        completion_overlay = CompletionOverlay()
 
         running = True
 
         while running:
             layout = window.layout(screen)
+            world_restarted = False
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
+                elif world.is_complete:
+                    action = completion_overlay.handle_event(event)
+                    if action == "restart":
+                        world = World(rng=_random_module.Random(world_seed))
+                        world_restarted = True
+                    elif action == "exit":
+                        running = False
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_F11:
                         screen = window.toggle_fullscreen()
@@ -67,10 +86,14 @@ def main() -> None:
                         world_position
                     )
 
-            world.update()
+            _maybe_update_world(world, world_restarted)
 
             layout = window.layout(screen)
             renderer.draw(world, layout)
+
+            if world.is_complete:
+                completion_overlay.draw(screen, layout)
+
             inspector.draw(
                 screen,
                 world,

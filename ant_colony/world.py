@@ -287,14 +287,14 @@ class World:
         if not recruitable:
             return None
 
-        _, selected_food = max(
+        selected_pair = max(
             recruitable,
             key=lambda item: (
                 item[0].strength,
                 -item[0].id,
             ),
         )
-        return selected_food
+        return selected_pair[1]
 
     def _remembered_food_for(
         self,

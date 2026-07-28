@@ -2,7 +2,11 @@ import random as _random_module
 from collections.abc import Iterator
 from typing import TypeVar
 
-from ant_colony.components import AntState, FoodTargetSource
+from ant_colony.components import (
+    AntState,
+    FoodTargetSource,
+    ResourceType,
+)
 from ant_colony.config import settings
 from ant_colony.entities.ant import Ant
 from ant_colony.entities.building_material import (
@@ -213,6 +217,9 @@ class World:
         if ant.state != AntState.WANDERING:
             return
 
+        if not ant.inventory.is_empty:
+            return
+
         discovered_food = tuple(
             entity
             for entity in discovered_entities
@@ -234,6 +241,18 @@ class World:
             )
             return
 
+        pheromone_food = self._food_from_pheromones(
+            ant,
+            discovered_entities,
+        )
+
+        if pheromone_food is not None:
+            ant.select_food_target(
+                pheromone_food,
+                source=FoodTargetSource.PHEROMONE,
+            )
+            return
+
         remembered_food = self._remembered_food_for(ant)
 
         if remembered_food is not None:
@@ -241,6 +260,41 @@ class World:
                 remembered_food,
                 source=FoodTargetSource.MEMORY,
             )
+
+    def _food_from_pheromones(
+        self,
+        ant: Ant,
+        discovered_entities: tuple[Entity, ...],
+    ) -> Food | None:
+        food_by_id = {
+            food.id: food
+            for food in self.food
+            if not food.is_depleted
+        }
+        recruitable: list[tuple[Pheromone, Food]] = []
+
+        for entity in discovered_entities:
+            if not isinstance(entity, Pheromone):
+                continue
+
+            source_food = food_by_id.get(entity.source_food_id)
+
+            if source_food is None:
+                continue
+
+            recruitable.append((entity, source_food))
+
+        if not recruitable:
+            return None
+
+        selected_pair = max(
+            recruitable,
+            key=lambda item: (
+                item[0].strength,
+                -item[0].id,
+            ),
+        )
+        return selected_pair[1]
 
     def _remembered_food_for(
         self,
@@ -327,9 +381,23 @@ class World:
             if ant.inventory.is_empty:
                 continue
 
+            carried_food_portion = next(
+                (
+                    portion
+                    for portion in ant.inventory.items
+                    if portion.resource_type == ResourceType.FOOD
+                    and isinstance(portion.source_id, int)
+                ),
+                None,
+            )
+
+            if carried_food_portion is None:
+                continue
+
             self.add_entity(
                 Pheromone(
                     pheromone_id=self._next_pheromone_id,
+                    source_food_id=carried_food_portion.source_id,
                     x=ant.x,
                     y=ant.y,
                 )
@@ -386,6 +454,10 @@ class World:
 
             if ant.food_target is resource:
                 ant.clear_food_target()
+
+        for pheromone in self.pheromones:
+            if pheromone.source_food_id == resource.id:
+                self.remove_entity(pheromone)
 
     def __iter__(self) -> Iterator[Entity]:
         return iter(self._entities)

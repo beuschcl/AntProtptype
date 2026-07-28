@@ -9,4 +9,5 @@ class AntState(Enum):
 
 class FoodTargetSource(Enum):
     DISCOVERY = "discovery"
+    PHEROMONE = "pheromone"
     MEMORY = "memory"

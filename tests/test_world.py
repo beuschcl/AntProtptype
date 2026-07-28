@@ -335,6 +335,184 @@ def test_world_prefers_new_discovery_over_remembered_food() -> None:
     assert ant.food_target_source == FoodTargetSource.DISCOVERY
 
 
+def test_world_assigns_food_from_sensed_pheromone() -> None:
+    world = World()
+    ant = world.ants[0]
+    food = world.food[0]
+    pheromone = Pheromone(
+        pheromone_id=1,
+        source_food_id=food.id,
+        x=100,
+        y=100,
+    )
+    world.add_entity(pheromone)
+    ant.x = 100
+    ant.y = 100
+
+    world._assign_food_target(
+        ant,
+        (pheromone,),
+    )
+
+    assert ant.food_target is food
+    assert ant.food_target_source == FoodTargetSource.PHEROMONE
+    assert ant.state == AntState.SEEKING_FOOD
+
+
+def test_world_does_not_recruit_ant_outside_pheromone_range() -> None:
+    world = World()
+    ant = world.ants[0]
+    food = world.food[0]
+    pheromone = Pheromone(
+        pheromone_id=1,
+        source_food_id=food.id,
+        x=settings.WORLD_WIDTH,
+        y=settings.WORLD_HEIGHT,
+    )
+    world.add_entity(pheromone)
+    ant.x = 0
+    ant.y = 0
+    food.x = settings.WORLD_WIDTH
+    food.y = settings.WORLD_HEIGHT
+
+    discovered = world.sense_for(ant)
+    world._assign_food_target(ant, discovered)
+
+    assert pheromone not in discovered
+    assert ant.food_target is None
+    assert ant.state == AntState.WANDERING
+
+
+def test_world_prefers_discovered_food_over_pheromone() -> None:
+    world = World()
+    ant = world.ants[0]
+    discovered_food = world.food[0]
+    pheromone_food = world.food[1]
+    pheromone = Pheromone(
+        pheromone_id=1,
+        source_food_id=pheromone_food.id,
+        x=100,
+        y=100,
+    )
+    world.add_entity(pheromone)
+
+    world._assign_food_target(
+        ant,
+        (
+            pheromone,
+            discovered_food,
+        ),
+    )
+
+    assert ant.food_target is discovered_food
+    assert ant.food_target_source == FoodTargetSource.DISCOVERY
+
+
+def test_world_prefers_pheromone_over_remembered_food() -> None:
+    world = World()
+    ant = world.ants[0]
+    remembered_food = world.food[0]
+    pheromone_food = world.food[1]
+    ant.observe(remembered_food)
+    pheromone = Pheromone(
+        pheromone_id=1,
+        source_food_id=pheromone_food.id,
+        x=100,
+        y=100,
+    )
+    world.add_entity(pheromone)
+
+    world._assign_food_target(
+        ant,
+        (pheromone,),
+    )
+
+    assert ant.food_target is pheromone_food
+    assert ant.food_target_source == FoodTargetSource.PHEROMONE
+
+
+def test_world_selects_strongest_pheromone_then_lowest_id() -> None:
+    world = World()
+    ant = world.ants[0]
+    first_food = world.food[0]
+    second_food = world.food[1]
+    strong_pheromone = Pheromone(
+        pheromone_id=5,
+        source_food_id=first_food.id,
+        x=100,
+        y=100,
+        strength=0.8,
+    )
+    weak_pheromone = Pheromone(
+        pheromone_id=1,
+        source_food_id=second_food.id,
+        x=100,
+        y=100,
+        strength=0.2,
+    )
+
+    world._assign_food_target(
+        ant,
+        (
+            weak_pheromone,
+            strong_pheromone,
+        ),
+    )
+
+    assert ant.food_target is first_food
+    assert ant.food_target_source == FoodTargetSource.PHEROMONE
+
+    ant.clear_food_target()
+
+    equal_strength_a = Pheromone(
+        pheromone_id=3,
+        source_food_id=first_food.id,
+        x=100,
+        y=100,
+        strength=0.6,
+    )
+    equal_strength_b = Pheromone(
+        pheromone_id=2,
+        source_food_id=second_food.id,
+        x=100,
+        y=100,
+        strength=0.6,
+    )
+
+    world._assign_food_target(
+        ant,
+        (
+            equal_strength_a,
+            equal_strength_b,
+        ),
+    )
+
+    assert ant.food_target is second_food
+    assert ant.food_target_source == FoodTargetSource.PHEROMONE
+
+
+def test_world_ignores_pheromone_for_missing_food_source() -> None:
+    world = World()
+    ant = world.ants[0]
+    missing_food = world.food[0]
+    pheromone = Pheromone(
+        pheromone_id=1,
+        source_food_id=missing_food.id,
+        x=100,
+        y=100,
+    )
+    world.add_entity(pheromone)
+    world.remove_entity(missing_food)
+
+    world._assign_food_target(
+        ant,
+        (pheromone,),
+    )
+
+    assert ant.food_target is None
+    assert ant.state == AntState.WANDERING
+
+
 def test_world_forgets_food_that_is_no_longer_available() -> None:
     world = World()
     ant = world.ants[0]
@@ -545,6 +723,7 @@ def test_world_exposes_pheromones() -> None:
 
     pheromone = Pheromone(
         pheromone_id=1,
+        source_food_id=1,
         x=100,
         y=100,
     )
@@ -583,6 +762,7 @@ def test_world_deposits_pheromone_for_carrying_ant() -> None:
 
     pheromone = world.pheromones[0]
 
+    assert pheromone.source_food_id == 1
     assert pheromone.x == 100
     assert pheromone.y == 200
 
@@ -648,6 +828,7 @@ def test_world_removes_depleted_pheromone() -> None:
 
     pheromone = Pheromone(
         pheromone_id=1,
+        source_food_id=1,
         x=100,
         y=100,
         strength=(
@@ -660,6 +841,23 @@ def test_world_removes_depleted_pheromone() -> None:
 
     assert pheromone not in world.entities
     assert world.pheromones == ()
+
+
+def test_world_removes_pheromones_when_source_food_is_removed() -> None:
+    world = World()
+    food = world.food[0]
+    pheromone = Pheromone(
+        pheromone_id=1,
+        source_food_id=food.id,
+        x=100,
+        y=100,
+    )
+    world.add_entity(pheromone)
+
+    world.remove_entity(food)
+
+    assert pheromone not in world.entities
+    assert pheromone not in world.pheromones
 
 def test_world_exposes_all_resource_types() -> None:
     world = World()

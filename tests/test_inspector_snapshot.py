@@ -114,6 +114,24 @@ def test_snapshot_explains_remembered_food_target() -> None:
     )
 
 
+def test_snapshot_explains_pheromone_food_target() -> None:
+    world = World()
+    ant = world.ants[0]
+    food = world.food[0]
+
+    ant.select_food_target(
+        food,
+        source=FoodTargetSource.PHEROMONE,
+    )
+    world.selected_ant = ant
+
+    snapshot = InspectorSnapshot.from_world(world)
+
+    assert snapshot.selected_ant_target == (
+        f"Food {food.id} (pheromone)"
+    )
+
+
 def test_snapshot_identifies_nest_target() -> None:
     world = World()
     ant = world.ants[0]
@@ -139,6 +157,7 @@ def test_snapshot_contains_pheromone_count() -> None:
     world.add_entity(
         Pheromone(
             pheromone_id=1,
+            source_food_id=1,
             x=100,
             y=100,
         )
@@ -146,6 +165,7 @@ def test_snapshot_contains_pheromone_count() -> None:
     world.add_entity(
         Pheromone(
             pheromone_id=2,
+            source_food_id=1,
             x=200,
             y=200,
         )

@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from ant_colony.components import FoodTargetSource
+
 if TYPE_CHECKING:
     from ant_colony.entities.ant import Ant
     from ant_colony.world import World
@@ -95,6 +97,9 @@ class InspectorSnapshot:
         ant: Ant,
     ) -> str:
         if ant.food_target is not None:
+            if ant.food_target_source == FoodTargetSource.MEMORY:
+                return f"Food {ant.food_target.id} (remembered)"
+
             return f"Food {ant.food_target.id}"
 
         if ant.nest_target is not None:

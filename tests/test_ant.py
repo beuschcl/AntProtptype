@@ -1,5 +1,6 @@
 from ant_colony.components import (
     AntState,
+    FoodTargetSource,
     ResourcePortion,
     ResourceType,
 )
@@ -117,7 +118,35 @@ def test_ant_selects_food_target() -> None:
 
     assert selected
     assert ant.food_target is food
+    assert ant.food_target_source == FoodTargetSource.DISCOVERY
     assert ant.state == AntState.SEEKING_FOOD
+
+
+def test_ant_can_mark_food_target_as_remembered() -> None:
+    ant = Ant(ant_id=1)
+    food = make_food()
+
+    selected = ant.select_food_target(
+        food,
+        source=FoodTargetSource.MEMORY,
+    )
+
+    assert selected
+    assert ant.food_target_source == FoodTargetSource.MEMORY
+
+
+def test_clearing_food_target_clears_its_source() -> None:
+    ant = Ant(ant_id=1)
+    food = make_food()
+    ant.select_food_target(
+        food,
+        source=FoodTargetSource.MEMORY,
+    )
+
+    ant.clear_food_target()
+
+    assert ant.food_target is None
+    assert ant.food_target_source is None
 
 
 def test_ant_moves_toward_food_target() -> None:

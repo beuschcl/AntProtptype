@@ -2,7 +2,7 @@ import random as _random_module
 from collections.abc import Iterator
 from typing import TypeVar
 
-from ant_colony.components import AntState
+from ant_colony.components import AntState, FoodTargetSource
 from ant_colony.config import settings
 from ant_colony.entities.ant import Ant
 from ant_colony.entities.building_material import (
@@ -14,6 +14,7 @@ from ant_colony.entities.nest import Nest
 from ant_colony.entities.pheromone import Pheromone
 from ant_colony.entities.resource import Resource
 from ant_colony.entities.water import Water
+from ant_colony.knowledge import EntityObservation
 
 EntityType = TypeVar(
     "EntityType",
@@ -194,7 +195,10 @@ class World:
         for ant in self.ants:
             self._collect_food_for(ant)
             self._assign_nest_target(ant)
-            self._deposit_food_for(ant)
+            deposited_nutrition = self._deposit_food_for(ant)
+
+            if deposited_nutrition > 0:
+                self._assign_food_target(ant, ())
 
         self._deposit_pheromones()
         self._remove_depleted_resources()
@@ -216,15 +220,66 @@ class World:
             and not entity.is_depleted
         )
 
-        if not discovered_food:
+        if discovered_food:
+            closest_food = min(
+                discovered_food,
+                key=lambda food: (
+                    ant.distance_to(food),
+                    food.id,
+                ),
+            )
+            ant.select_food_target(
+                closest_food,
+                source=FoodTargetSource.DISCOVERY,
+            )
             return
 
-        closest_food = min(
-            discovered_food,
-            key=ant.distance_to,
-        )
+        remembered_food = self._remembered_food_for(ant)
 
-        ant.select_food_target(closest_food)
+        if remembered_food is not None:
+            ant.select_food_target(
+                remembered_food,
+                source=FoodTargetSource.MEMORY,
+            )
+
+    def _remembered_food_for(
+        self,
+        ant: Ant,
+    ) -> Food | None:
+        food_by_id = {
+            food.id: food
+            for food in self.food
+            if not food.is_depleted
+        }
+        remembered_food: list[Food] = []
+
+        for memory in ant.knowledge.memories:
+            observation = memory.value
+
+            if not isinstance(observation, EntityObservation):
+                continue
+
+            if observation.entity_type != "food":
+                continue
+
+            food = food_by_id.get(observation.entity_id)
+
+            if food is None:
+                ant.knowledge.forget(memory.name)
+                continue
+
+            remembered_food.append(food)
+
+        if not remembered_food:
+            return None
+
+        return min(
+            remembered_food,
+            key=lambda food: (
+                ant.distance_to(food),
+                food.id,
+            ),
+        )
 
     def _assign_nest_target(
         self,
@@ -244,11 +299,11 @@ class World:
     def _deposit_food_for(
         self,
         ant: Ant,
-    ) -> None:
+    ) -> int:
         if ant.nest_target is None:
-            return
+            return 0
 
-        ant.deposit_into(self.nest)
+        return ant.deposit_into(self.nest)
     
     def _collect_food_for(
         self,
@@ -322,7 +377,13 @@ class World:
         if not isinstance(resource, Food):
             return
 
+        memory_name = EntityObservation.from_entity(
+            resource
+        ).memory_name
+
         for ant in self.ants:
+            ant.knowledge.forget(memory_name)
+
             if ant.food_target is resource:
                 ant.clear_food_target()
 

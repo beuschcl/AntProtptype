@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from ant_colony.components import (
     AntState,
+    FoodTargetSource,
     Inventory,
     Senses,
 )
@@ -59,11 +60,16 @@ class Ant(Entity):
         self.knowledge = Knowledge()
 
         self._food_target: Food | None = None
+        self._food_target_source: FoodTargetSource | None = None
         self._nest_target: Nest | None = None
 
     @property
     def food_target(self) -> Food | None:
         return self._food_target
+
+    @property
+    def food_target_source(self) -> FoodTargetSource | None:
+        return self._food_target_source
 
     @property
     def nest_target(self) -> Nest | None:
@@ -99,6 +105,7 @@ class Ant(Entity):
     def select_food_target(
         self,
         food: Food,
+        source: FoodTargetSource = FoodTargetSource.DISCOVERY,
     ) -> bool:
         if self.inventory.count() > 0:
             return False
@@ -109,11 +116,13 @@ class Ant(Entity):
 
         self._nest_target = None
         self._food_target = food
+        self._food_target_source = source
         self.state = AntState.SEEKING_FOOD
         return True
 
     def clear_food_target(self) -> None:
         self._food_target = None
+        self._food_target_source = None
 
         if self.inventory.is_empty:
             self.state = AntState.WANDERING

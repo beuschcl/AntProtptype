@@ -4,10 +4,11 @@ from ant_colony.components.resources import (
     ResourceType,
 )
 from ant_colony.components.senses import Senses
-from ant_colony.components.state import AntState
+from ant_colony.components.state import AntState, FoodTargetSource
 
 __all__ = [
     "AntState",
+    "FoodTargetSource",
     "Inventory",
     "ResourcePortion",
     "ResourceType",

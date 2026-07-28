@@ -126,7 +126,7 @@ def test_nest_consume_never_goes_negative() -> None:
 
 
 def _world_with_reserve(reserve: int) -> World:
-    """Return a seeded world whose nest already holds ``reserve`` nutrition."""
+    """Seeded world (2 ants, 3 food sources) with ``reserve`` nutrition in the nest."""
     world = _seeded_world()
     if reserve > 0:
         world.nest.deposit(

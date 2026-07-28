@@ -451,6 +451,10 @@ class World:
         for resource in self.resources:
             if resource.is_depleted:
                 self.remove_entity(resource)
+                # After removing the depleted source, replace it only if
+                # the active count is still below the cap.  len(self.food)
+                # is evaluated post-removal so the check is intentionally
+                # against the already-reduced count.
                 if isinstance(resource, Food):
                     if (
                         len(self.food)

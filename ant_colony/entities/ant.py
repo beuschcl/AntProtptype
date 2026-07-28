@@ -30,7 +30,7 @@ class Ant(Entity):
         ant_id: int,
         rng: _random_module.Random | None = None,
     ) -> None:
-        self._rng = rng if rng is not None else _random_module
+        self._rng = rng if rng is not None else _random_module.Random()
         x = self._rng.uniform(
             settings.ANT_BOUNDARY_PADDING,
             settings.WORLD_WIDTH - settings.ANT_BOUNDARY_PADDING,

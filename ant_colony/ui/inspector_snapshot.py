@@ -99,6 +99,8 @@ class InspectorSnapshot:
         if ant.food_target is not None:
             if ant.food_target_source == FoodTargetSource.MEMORY:
                 return f"Food {ant.food_target.id} (remembered)"
+            if ant.food_target_source == FoodTargetSource.PHEROMONE:
+                return f"Food {ant.food_target.id} (pheromone)"
 
             return f"Food {ant.food_target.id}"
 

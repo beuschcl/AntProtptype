@@ -8,6 +8,7 @@ from ant_colony.graphics.primitives import Circle
 def test_pheromone_starts_with_configured_strength() -> None:
     pheromone = Pheromone(
         pheromone_id=1,
+        source_food_id=7,
         x=100,
         y=200,
     )
@@ -26,6 +27,7 @@ def test_pheromone_rejects_nonpositive_strength() -> None:
     ):
         Pheromone(
             pheromone_id=1,
+            source_food_id=7,
             x=100,
             y=200,
             strength=0,
@@ -35,6 +37,7 @@ def test_pheromone_rejects_nonpositive_strength() -> None:
 def test_pheromone_evaporates() -> None:
     pheromone = Pheromone(
         pheromone_id=1,
+        source_food_id=7,
         x=100,
         y=200,
         strength=0.5,
@@ -50,6 +53,7 @@ def test_pheromone_evaporates() -> None:
 def test_pheromone_strength_cannot_be_negative() -> None:
     pheromone = Pheromone(
         pheromone_id=1,
+        source_food_id=7,
         x=100,
         y=200,
         strength=(
@@ -66,6 +70,7 @@ def test_pheromone_strength_cannot_be_negative() -> None:
 def test_depleted_pheromone_has_no_shapes() -> None:
     pheromone = Pheromone(
         pheromone_id=1,
+        source_food_id=7,
         x=100,
         y=200,
         strength=(
@@ -81,6 +86,7 @@ def test_depleted_pheromone_has_no_shapes() -> None:
 def test_pheromone_exposes_circle_shape() -> None:
     pheromone = Pheromone(
         pheromone_id=1,
+        source_food_id=7,
         x=100,
         y=200,
     )
@@ -92,3 +98,14 @@ def test_pheromone_exposes_circle_shape() -> None:
     assert shapes[0].x == 100
     assert shapes[0].y == 200
     assert shapes[0].color == settings.PHEROMONE_COLOR
+
+
+def test_pheromone_tracks_source_food() -> None:
+    pheromone = Pheromone(
+        pheromone_id=1,
+        source_food_id=17,
+        x=100,
+        y=200,
+    )
+
+    assert pheromone.source_food_id == 17

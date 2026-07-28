@@ -7,6 +7,7 @@ class Pheromone(Entity):
     def __init__(
         self,
         pheromone_id: int,
+        source_food_id: int,
         x: float,
         y: float,
         strength: float = settings.PHEROMONE_INITIAL_STRENGTH,
@@ -26,10 +27,15 @@ class Pheromone(Entity):
         )
 
         self._strength = strength
+        self._source_food_id = source_food_id
 
     @property
     def strength(self) -> float:
         return self._strength
+
+    @property
+    def source_food_id(self) -> int:
+        return self._source_food_id
 
     @property
     def is_depleted(self) -> bool:

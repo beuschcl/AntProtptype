@@ -478,3 +478,76 @@ def test_hydration_restore_rejects_negative_amount() -> None:
         need.restore(-5.0)
 
     assert need.current == state_before
+
+
+# ---------------------------------------------------------------------------
+# RNG injection — seeded World determinism
+# ---------------------------------------------------------------------------
+
+
+def _ant_state(ant: Ant) -> tuple[float, float, float, float]:
+    """Return (x, y, speed, heading) for comparison."""
+    return (ant.x, ant.y, ant.speed, ant.heading)
+
+
+def test_same_seed_produces_identical_initial_ant_positions() -> None:
+    world_a = World(rng=random.Random(99))
+    world_b = World(rng=random.Random(99))
+
+    states_a = sorted(_ant_state(a) for a in world_a.ants)
+    states_b = sorted(_ant_state(b) for b in world_b.ants)
+
+    assert states_a == states_b
+
+
+def test_different_seeds_produce_different_initial_ant_positions() -> None:
+    world_a = World(rng=random.Random(1))
+    world_b = World(rng=random.Random(2))
+
+    states_a = sorted(_ant_state(a) for a in world_a.ants)
+    states_b = sorted(_ant_state(b) for b in world_b.ants)
+
+    assert states_a != states_b
+
+
+def test_same_seed_produces_identical_spawned_ant_state() -> None:
+    def _world_ready_to_spawn(seed: int) -> World:
+        world = World(rng=random.Random(seed))
+        world.nest.deposit(
+            (
+                ResourcePortion(
+                    source_id=1,
+                    resource_type=ResourceType.FOOD,
+                    value=settings.ANT_SPAWN_FOOD_COST,
+                ),
+            )
+        )
+        # Prevent food collection from polluting RNG state
+        for food in world.food:
+            food.x = settings.WORLD_WIDTH
+            food.y = settings.WORLD_HEIGHT
+        for ant in world.ants:
+            ant.x = 0
+            ant.y = 0
+            ant.speed = 0
+        return world
+
+    world_a = _world_ready_to_spawn(seed=77)
+    world_b = _world_ready_to_spawn(seed=77)
+
+    world_a.update()
+    world_b.update()
+
+    new_a = max(world_a.ants, key=lambda a: a.id)
+    new_b = max(world_b.ants, key=lambda a: a.id)
+
+    assert _ant_state(new_a) == _ant_state(new_b)
+
+
+def test_ant_standalone_creation_requires_no_rng() -> None:
+    """Backward-compat: Ant(ant_id) still works without an rng argument."""
+    ant = Ant(ant_id=99)
+
+    assert ant.id == 99
+    assert 0 < ant.speed
+    assert 0 <= ant.heading < 360

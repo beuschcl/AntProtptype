@@ -28,11 +28,7 @@ class EntityObservation:
 
     @property
     def memory_name(self) -> str:
-        return (
-            f"entity:"
-            f"{self.entity_type}:"
-            f"{self.entity_id}"
-        )
+        return f"entity:{self.entity_type}:{self.entity_id}"
 
     @property
     def position(self) -> tuple[float, float]:

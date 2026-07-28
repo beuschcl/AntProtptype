@@ -37,6 +37,7 @@ class World:
         self._next_food_id = 1
         self._next_ant_id = settings.STARTING_ANTS
         self._update_count = 0
+        self._colony_complete = False
         self._rng = rng if rng is not None else _random_module.Random()
 
         self.add_entity(
@@ -113,6 +114,11 @@ class World:
 
         return nests[0]
 
+    @property
+    def is_complete(self) -> bool:
+        """True once the colony has reached ``MAX_ANTS`` for the first time."""
+        return self._colony_complete
+
     def add_entity(
         self,
         entity: Entity,
@@ -168,6 +174,9 @@ class World:
         return discovered_entities
 
     def update(self) -> None:
+        if self._colony_complete:
+            return
+
         for ant in self.ants:
             discovered_entities = self.sense_for(ant)
 
@@ -190,6 +199,7 @@ class World:
                 self._assign_food_target(ant, ())
 
         self._deposit_pheromones()
+        self._process_upkeep()
         self._maybe_spawn_ant()
         self._remove_depleted_resources()
         self._remove_depleted_pheromones()
@@ -206,6 +216,25 @@ class World:
         if not ant.inventory.is_empty:
             return
 
+        target, source = self._find_food_target(ant, discovered_entities)
+
+        if target is None:
+            return
+
+        # If the ant is leaving the nest for the first time (or again
+        # after returning), charge the one-time excursion energy cost.
+        if not ant.on_excursion and not ant.depart():
+            # Insufficient energy — keep the ant at the nest.
+            return
+
+        ant.select_food_target(target, source=source)
+
+    def _find_food_target(
+        self,
+        ant: Ant,
+        discovered_entities: tuple[Entity, ...],
+    ) -> tuple[Food | None, FoodTargetSource]:
+        """Return the best food target and its source without side-effects."""
         discovered_food = tuple(
             entity
             for entity in discovered_entities
@@ -220,11 +249,7 @@ class World:
                     food.id,
                 ),
             )
-            ant.select_food_target(
-                closest_food,
-                source=FoodTargetSource.DISCOVERY,
-            )
-            return
+            return closest_food, FoodTargetSource.DISCOVERY
 
         pheromone_food = self._food_from_pheromones(
             ant,
@@ -232,19 +257,14 @@ class World:
         )
 
         if pheromone_food is not None:
-            ant.select_food_target(
-                pheromone_food,
-                source=FoodTargetSource.PHEROMONE,
-            )
-            return
+            return pheromone_food, FoodTargetSource.PHEROMONE
 
         remembered_food = self._remembered_food_for(ant)
 
         if remembered_food is not None:
-            ant.select_food_target(
-                remembered_food,
-                source=FoodTargetSource.MEMORY,
-            )
+            return remembered_food, FoodTargetSource.MEMORY
+
+        return None, FoodTargetSource.DISCOVERY
 
     def _food_from_pheromones(
         self,
@@ -334,7 +354,10 @@ class World:
         if ant.nest_target is None:
             return 0
 
-        return ant.deposit_into(self.nest)
+        deposited = ant.deposit_into(self.nest)
+        if deposited > 0:
+            ant.arrive()
+        return deposited
 
     def _collect_food_for(
         self,
@@ -382,6 +405,20 @@ class World:
 
             self._next_pheromone_id += 1
 
+    def _process_upkeep(self) -> None:
+        """Refuel ants at the nest in ascending ID order.
+
+        Each 10-energy increment costs 1 nutrition from the nest reserve.
+        Colony upkeep has priority over spawning.
+        """
+        for ant in sorted(self.ants, key=lambda a: a.id):
+            if ant.on_excursion:
+                continue
+            while not ant.energy.is_full:
+                if not self.nest.consume(settings.ANT_REFUEL_FOOD_COST):
+                    break
+                ant.energy.restore(settings.ANT_REFUEL_ENERGY_AMOUNT)
+
     def _maybe_spawn_ant(self) -> None:
         if len(self.ants) >= settings.MAX_ANTS:
             return
@@ -395,6 +432,9 @@ class World:
         new_ant.x = nest.x
         new_ant.y = nest.y
         self.add_entity(new_ant)
+
+        if len(self.ants) >= settings.MAX_ANTS:
+            self._colony_complete = True
 
     def _spawn_food(self) -> Food:
         food_id = self._next_food_id

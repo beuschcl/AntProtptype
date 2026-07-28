@@ -14,9 +14,7 @@ def make_entity(
         entity_id=entity_id,
         x=x,
         y=y,
-        discoverable_radius=(
-            discoverable_radius
-        ),
+        discoverable_radius=(discoverable_radius),
     )
 
 

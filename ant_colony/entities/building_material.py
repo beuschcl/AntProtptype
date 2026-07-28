@@ -17,21 +17,12 @@ class BuildingMaterial(Resource):
             resource_id=material_id,
             x=x,
             y=y,
-            resource_type=(
-                ResourceType.BUILDING_MATERIAL
-            ),
+            resource_type=(ResourceType.BUILDING_MATERIAL),
             value=construction_value,
             quantity=quantity,
-            radius=(
-                settings.BUILDING_MATERIAL_RADIUS
-            ),
-            color=(
-                settings.BUILDING_MATERIAL_COLOR
-            ),
-            discoverable_radius=(
-                settings
-                .BUILDING_MATERIAL_DISCOVERABLE_RADIUS
-            ),
+            radius=(settings.BUILDING_MATERIAL_RADIUS),
+            color=(settings.BUILDING_MATERIAL_COLOR),
+            discoverable_radius=(settings.BUILDING_MATERIAL_DISCOVERABLE_RADIUS),
         )
 
     @property

@@ -1,4 +1,4 @@
-#ant_colony/graphics/renderer.py
+# ant_colony/graphics/renderer.py
 
 import pygame
 
@@ -7,7 +7,6 @@ from ant_colony.graphics.primitives import Circle, Polygon
 
 
 class Renderer:
-
     def __init__(self, screen, camera):
 
         self.screen = screen
@@ -15,9 +14,7 @@ class Renderer:
 
     def draw(self, world):
 
-        self.screen.fill(
-            settings.BACKGROUND_COLOR
-        )
+        self.screen.fill(settings.BACKGROUND_COLOR)
 
         self.draw_entities(world)
 
@@ -32,11 +29,8 @@ class Renderer:
         ]
 
         for entity in entities:
-
             for shape in entity.shapes():
-
                 if isinstance(shape, Circle):
-
                     x, y = self.camera.world_to_screen(
                         shape.x,
                         shape.y,
@@ -50,7 +44,6 @@ class Renderer:
                     )
 
                 elif isinstance(shape, Polygon):
-
                     points = [
                         self.camera.world_to_screen(
                             x,
@@ -66,7 +59,6 @@ class Renderer:
                     )
 
             if entity is world.selected_ant:
-
                 x, y = self.camera.world_to_screen(
                     entity.x,
                     entity.y,

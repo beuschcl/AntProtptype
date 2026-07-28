@@ -57,13 +57,9 @@ def test_ant_owns_independent_knowledge() -> None:
         (200, 200),
     )
 
-    assert first_ant.knowledge.recall(
-        "food_location"
-    ) == (200, 200)
+    assert first_ant.knowledge.recall("food_location") == (200, 200)
 
-    assert second_ant.knowledge.recall(
-        "food_location"
-    ) is None
+    assert second_ant.knowledge.recall("food_location") is None
 
 
 def test_ant_observes_entity() -> None:
@@ -79,9 +75,7 @@ def test_ant_observes_entity() -> None:
         y=200,
     )
 
-    assert ant.knowledge.recall(
-        "entity:food:7"
-    ) == observation
+    assert ant.knowledge.recall("entity:food:7") == observation
 
 
 def test_observing_entity_again_updates_position() -> None:
@@ -95,9 +89,7 @@ def test_observing_entity_again_updates_position() -> None:
 
     ant.observe(food)
 
-    observation = ant.knowledge.recall(
-        "entity:food:7"
-    )
+    observation = ant.knowledge.recall("entity:food:7")
 
     assert isinstance(
         observation,
@@ -231,11 +223,7 @@ def test_ant_collect_hitbox_boundary_conditions() -> None:
     ant.x = 0
     ant.y = 0
 
-    boundary = (
-        ant.hitbox_radius
-        + food.hitbox_radius
-        + settings.ANT_INTERACTION_RADIUS
-    )
+    boundary = ant.hitbox_radius + food.hitbox_radius + settings.ANT_INTERACTION_RADIUS
 
     food.x = boundary - 0.01
     assert ant.can_collect(food)
@@ -261,12 +249,11 @@ def test_ant_with_full_inventory_rejects_target() -> None:
     ant.y = first_food.y
     ant.collect_from(first_food)
 
-    selected = ant.select_food_target(
-        second_food
-    )
+    selected = ant.select_food_target(second_food)
 
     assert not selected
     assert ant.food_target is None
+
 
 def test_ant_can_select_nest_when_carrying_food() -> None:
     ant = Ant(ant_id=1)

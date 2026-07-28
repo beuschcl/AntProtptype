@@ -127,8 +127,7 @@ class WindowController:
                 min(
                     requested_width,
                     settings.MAX_INSPECTOR_WIDTH,
-                    layout.window_rect.width
-                    - settings.MIN_WORLD_VIEWPORT_WIDTH,
+                    layout.window_rect.width - settings.MIN_WORLD_VIEWPORT_WIDTH,
                 ),
             )
             return True

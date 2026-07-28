@@ -9,9 +9,7 @@ class Inventory:
         capacity: int = 1,
     ) -> None:
         if capacity < 0:
-            raise ValueError(
-                "Inventory capacity cannot be negative."
-            )
+            raise ValueError("Inventory capacity cannot be negative.")
 
         self._capacity = capacity
         self._items: list[ResourcePortion] = []
@@ -34,10 +32,7 @@ class Inventory:
 
     @property
     def total_value(self) -> int:
-        return sum(
-            item.value
-            for item in self._items
-        )
+        return sum(item.value for item in self._items)
 
     def add(
         self,

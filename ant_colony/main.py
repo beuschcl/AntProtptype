@@ -1,7 +1,10 @@
+import random as _random_module
+
 import pygame
 
 from ant_colony.config import settings
 from ant_colony.graphics.camera import Camera
+from ant_colony.ui.completion_overlay import CompletionOverlay
 from ant_colony.ui.inspector import Inspector
 from ant_colony.ui.renderer import Renderer
 from ant_colony.ui.window_layout import WindowController
@@ -12,21 +15,18 @@ def main() -> None:
     pygame.init()
 
     try:
+        world_seed = _random_module.randrange(2**32)
         window = WindowController()
         screen = window.create_screen()
 
-        pygame.display.set_caption(
-            settings.WINDOW_TITLE
-        )
+        pygame.display.set_caption(settings.WINDOW_TITLE)
 
         clock = pygame.time.Clock()
         camera = Camera()
-        world = World()
-        renderer = Renderer(
-            screen,
-            camera,
-        )
+        world = World(rng=_random_module.Random(world_seed))
+        renderer = Renderer(screen, camera)
         inspector = Inspector()
+        completion_overlay = CompletionOverlay()
 
         running = True
 
@@ -35,6 +35,12 @@ def main() -> None:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
+                elif world.is_complete:
+                    action = completion_overlay.handle_event(event)
+                    if action == "restart":
+                        world = World(rng=_random_module.Random(world_seed))
+                    elif action == "exit":
+                        running = False
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_F11:
                         screen = window.toggle_fullscreen()
@@ -57,25 +63,19 @@ def main() -> None:
                     and event.button == 1
                     and layout.world_viewport.collidepoint(event.pos)
                 ):
-                    world_position = (
-                        camera.screen_to_world(
-                            *event.pos,
-                        )
-                    )
+                    world_position = camera.screen_to_world(*event.pos)
+                    world.handle_click(world_position)
 
-                    world.handle_click(
-                        world_position
-                    )
-
-            world.update()
+            if not world.is_complete:
+                world.update()
 
             layout = window.layout(screen)
             renderer.draw(world, layout)
-            inspector.draw(
-                screen,
-                world,
-                layout,
-            )
+
+            if world.is_complete:
+                completion_overlay.draw(screen, layout)
+
+            inspector.draw(screen, world, layout)
 
             pygame.display.flip()
             clock.tick(settings.FPS)

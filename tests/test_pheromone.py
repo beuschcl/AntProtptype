@@ -13,10 +13,7 @@ def test_pheromone_starts_with_configured_strength() -> None:
         y=200,
     )
 
-    assert (
-        pheromone.strength
-        == settings.PHEROMONE_INITIAL_STRENGTH
-    )
+    assert pheromone.strength == settings.PHEROMONE_INITIAL_STRENGTH
     assert not pheromone.is_depleted
 
 
@@ -56,9 +53,7 @@ def test_pheromone_strength_cannot_be_negative() -> None:
         source_food_id=7,
         x=100,
         y=200,
-        strength=(
-            settings.PHEROMONE_EVAPORATION_RATE / 2
-        ),
+        strength=(settings.PHEROMONE_EVAPORATION_RATE / 2),
     )
 
     pheromone.update()
@@ -73,9 +68,7 @@ def test_depleted_pheromone_has_no_shapes() -> None:
         source_food_id=7,
         x=100,
         y=200,
-        strength=(
-            settings.PHEROMONE_EVAPORATION_RATE / 2
-        ),
+        strength=(settings.PHEROMONE_EVAPORATION_RATE / 2),
     )
 
     pheromone.update()

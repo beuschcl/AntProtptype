@@ -7,10 +7,13 @@ from ant_colony.ui.window_layout import WindowController, WindowLayout
 def test_layout_preserves_world_aspect_ratio() -> None:
     layout = WindowLayout.calculate((1600, 900), 300)
 
-    assert abs(
-        layout.world_viewport.width / layout.world_viewport.height
-        - settings.WORLD_WIDTH / settings.WORLD_HEIGHT
-    ) < 0.002
+    assert (
+        abs(
+            layout.world_viewport.width / layout.world_viewport.height
+            - settings.WORLD_WIDTH / settings.WORLD_HEIGHT
+        )
+        < 0.002
+    )
     assert layout.world_viewport.center == layout.world_area.center
     assert layout.world_viewport.right <= layout.world_area.right
     assert layout.world_viewport.bottom <= layout.world_area.bottom

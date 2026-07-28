@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from ant_colony.components import (
     AntState,
+    EnergyNeed,
     FoodTargetSource,
     HydrationNeed,
     Inventory,
@@ -63,7 +64,9 @@ class Ant(Entity):
         self.hydration = HydrationNeed(
             maximum=settings.ANT_MAX_HYDRATION,
         )
+        self.energy = EnergyNeed(maximum=settings.ANT_MAX_ENERGY)
 
+        self._on_excursion: bool = False
         self._food_target: Food | None = None
         self._food_target_source: FoodTargetSource | None = None
         self._nest_target: Nest | None = None
@@ -79,6 +82,27 @@ class Ant(Entity):
     @property
     def nest_target(self) -> Nest | None:
         return self._nest_target
+
+    @property
+    def on_excursion(self) -> bool:
+        """True while the ant is away from the nest on a field trip."""
+        return self._on_excursion
+
+    def depart(self) -> bool:
+        """Charge excursion energy and mark the ant as departed.
+
+        Returns ``True`` if the ant had enough energy and the departure
+        was recorded.  Returns ``False`` (no-op) if energy is
+        insufficient.
+        """
+        if self.energy.spend(settings.ANT_EXCURSION_ENERGY_COST):
+            self._on_excursion = True
+            return True
+        return False
+
+    def arrive(self) -> None:
+        """Mark the ant as returned to the nest."""
+        self._on_excursion = False
 
     @property
     def hitbox_radius(self) -> float:

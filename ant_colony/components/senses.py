@@ -10,9 +10,7 @@ class Senses:
         radius: float = settings.ANT_SENSE_RADIUS,
     ) -> None:
         if radius < 0:
-            raise ValueError(
-                "Sense radius cannot be negative."
-            )
+            raise ValueError("Sense radius cannot be negative.")
 
         self.radius = radius
 
@@ -24,15 +22,9 @@ class Senses:
         if observer is target:
             return False
 
-        detection_distance = (
-            self.radius
-            + target.discoverable_radius
-        )
+        detection_distance = self.radius + target.discoverable_radius
 
-        return (
-            observer.distance_to(target)
-            <= detection_distance
-        )
+        return observer.distance_to(target) <= detection_distance
 
     def detect(
         self,

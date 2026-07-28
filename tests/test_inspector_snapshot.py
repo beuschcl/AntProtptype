@@ -18,10 +18,7 @@ def test_snapshot_contains_colony_summary() -> None:
 
     assert snapshot.ant_count == len(world.ants)
     assert snapshot.food_source_count == len(world.food)
-    assert snapshot.remaining_food_portions == sum(
-        food.quantity
-        for food in world.food
-    )
+    assert snapshot.remaining_food_portions == sum(food.quantity for food in world.food)
     assert snapshot.nest_food_reserve == 0
     assert snapshot.delivered_portions == 0
     assert snapshot.selected_ant_id is None
@@ -74,10 +71,7 @@ def test_snapshot_contains_selected_ant_details() -> None:
     assert snapshot.selected_ant_state == "wandering"
     assert snapshot.selected_ant_inventory_count == 0
     assert snapshot.selected_ant_inventory_capacity == 2
-    assert snapshot.remaining_food_portions == sum(
-        food.quantity
-        for food in world.food
-    )
+    assert snapshot.remaining_food_portions == sum(food.quantity for food in world.food)
     assert snapshot.selected_ant_target == "None"
 
 
@@ -91,9 +85,7 @@ def test_snapshot_identifies_food_target() -> None:
 
     snapshot = InspectorSnapshot.from_world(world)
 
-    assert snapshot.selected_ant_target == (
-        f"Food {food.id}"
-    )
+    assert snapshot.selected_ant_target == (f"Food {food.id}")
 
 
 def test_snapshot_explains_remembered_food_target() -> None:
@@ -109,9 +101,7 @@ def test_snapshot_explains_remembered_food_target() -> None:
 
     snapshot = InspectorSnapshot.from_world(world)
 
-    assert snapshot.selected_ant_target == (
-        f"Food {food.id} (remembered)"
-    )
+    assert snapshot.selected_ant_target == (f"Food {food.id} (remembered)")
 
 
 def test_snapshot_explains_pheromone_food_target() -> None:
@@ -127,9 +117,7 @@ def test_snapshot_explains_pheromone_food_target() -> None:
 
     snapshot = InspectorSnapshot.from_world(world)
 
-    assert snapshot.selected_ant_target == (
-        f"Food {food.id} (pheromone)"
-    )
+    assert snapshot.selected_ant_target == (f"Food {food.id} (pheromone)")
 
 
 def test_snapshot_identifies_nest_target() -> None:
@@ -150,6 +138,7 @@ def test_snapshot_identifies_nest_target() -> None:
 
     assert snapshot.selected_ant_target == "Nest"
     assert snapshot.selected_ant_inventory_count == 1
+
 
 def test_snapshot_contains_pheromone_count() -> None:
     world = World()

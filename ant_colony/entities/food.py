@@ -22,9 +22,7 @@ class Food(Resource):
             quantity=quantity,
             radius=settings.FOOD_RADIUS,
             color=settings.FOOD_COLOR,
-            discoverable_radius=(
-                settings.FOOD_DISCOVERABLE_RADIUS
-            ),
+            discoverable_radius=(settings.FOOD_DISCOVERABLE_RADIUS),
         )
 
     @property

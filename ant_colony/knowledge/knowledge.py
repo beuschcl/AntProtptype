@@ -49,10 +49,7 @@ class Knowledge:
         for memory in self._memories.values():
             existing_value = other.recall(memory.name)
 
-            if (
-                not other.knows(memory.name)
-                or existing_value != memory.value
-            ):
+            if not other.knows(memory.name) or existing_value != memory.value:
                 other.remember(
                     memory.name,
                     memory.value,

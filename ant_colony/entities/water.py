@@ -22,9 +22,7 @@ class Water(Resource):
             quantity=quantity,
             radius=settings.WATER_RADIUS,
             color=settings.WATER_COLOR,
-            discoverable_radius=(
-                settings.WATER_DISCOVERABLE_RADIUS
-            ),
+            discoverable_radius=(settings.WATER_DISCOVERABLE_RADIUS),
         )
 
     @property

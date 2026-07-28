@@ -1,5 +1,6 @@
 from ant_colony.components import (
     AntState,
+    FoodTargetSource,
     ResourcePortion,
     ResourceType,
 )
@@ -92,6 +93,24 @@ def test_snapshot_identifies_food_target() -> None:
 
     assert snapshot.selected_ant_target == (
         f"Food {food.id}"
+    )
+
+
+def test_snapshot_explains_remembered_food_target() -> None:
+    world = World()
+    ant = world.ants[0]
+    food = world.food[0]
+
+    ant.select_food_target(
+        food,
+        source=FoodTargetSource.MEMORY,
+    )
+    world.selected_ant = ant
+
+    snapshot = InspectorSnapshot.from_world(world)
+
+    assert snapshot.selected_ant_target == (
+        f"Food {food.id} (remembered)"
     )
 
 

@@ -2,6 +2,7 @@ import pytest
 
 from ant_colony.components import (
     AntState,
+    FoodTargetSource,
     ResourcePortion,
     ResourceType,
 )
@@ -297,6 +298,108 @@ def test_world_assigns_closest_discovered_food() -> None:
     world.update()
 
     assert ant.food_target is existing_food
+    assert ant.food_target_source == FoodTargetSource.DISCOVERY
+    assert ant.state == AntState.SEEKING_FOOD
+
+
+def test_world_assigns_food_from_personal_memory() -> None:
+    world = World()
+    ant = world.ants[0]
+    food = world.food[0]
+    ant.x = 100
+    ant.y = 100
+    food.x = settings.WORLD_WIDTH
+    food.y = settings.WORLD_HEIGHT
+    ant.observe(food)
+
+    world._assign_food_target(ant, ())
+
+    assert ant.food_target is food
+    assert ant.food_target_source == FoodTargetSource.MEMORY
+    assert ant.state == AntState.SEEKING_FOOD
+
+
+def test_world_prefers_new_discovery_over_remembered_food() -> None:
+    world = World()
+    ant = world.ants[0]
+    remembered_food = world.food[0]
+    discovered_food = world.food[1]
+    ant.observe(remembered_food)
+
+    world._assign_food_target(
+        ant,
+        (discovered_food,),
+    )
+
+    assert ant.food_target is discovered_food
+    assert ant.food_target_source == FoodTargetSource.DISCOVERY
+
+
+def test_world_forgets_food_that_is_no_longer_available() -> None:
+    world = World()
+    ant = world.ants[0]
+    food = world.food[0]
+    observation = ant.observe(food)
+    world.remove_entity(food)
+
+    world._assign_food_target(ant, ())
+
+    assert not ant.knowledge.knows(observation.memory_name)
+    assert ant.food_target is None
+    assert ant.state == AntState.WANDERING
+
+
+def test_ant_stops_returning_when_remembered_food_is_exhausted() -> None:
+    world = World()
+    ant = world.ants[0]
+    food = world.food[0]
+    observation = ant.observe(food)
+
+    while not food.is_depleted:
+        food.collect()
+
+    world._remove_depleted_resources()
+    world._assign_food_target(ant, ())
+
+    assert food not in world.food
+    assert not ant.knowledge.knows(observation.memory_name)
+    assert ant.food_target is None
+    assert ant.state == AntState.WANDERING
+
+
+def test_ant_returns_to_remembered_food_after_delivery() -> None:
+    world = World()
+    ant = world.ants[0]
+    food = world.food[0]
+    nest = world.nest
+    food.x = 200
+    food.y = 200
+    ant.x = food.x
+    ant.y = food.y
+    ant.speed = 0
+
+    for other_ant in world.ants[1:]:
+        other_ant.x = settings.WORLD_WIDTH
+        other_ant.y = settings.WORLD_HEIGHT
+        other_ant.speed = 0
+
+    for other_food in world.food[1:]:
+        other_food.x = settings.WORLD_WIDTH
+        other_food.y = settings.WORLD_HEIGHT
+
+    world.update()
+
+    assert ant.inventory.count() == 1
+    assert ant.state == AntState.CARRYING_FOOD
+
+    ant.x = nest.x
+    ant.y = nest.y
+
+    world.update()
+
+    assert ant.inventory.is_empty
+    assert ant.food_target is food
+    assert ant.food_target_source == FoodTargetSource.MEMORY
     assert ant.state == AntState.SEEKING_FOOD
 
 
@@ -348,6 +451,7 @@ def test_removing_food_clears_ant_target() -> None:
     world.remove_entity(food)
 
     assert ant.food_target is None
+    assert ant.food_target_source is None
     assert ant.state == AntState.WANDERING
 
 

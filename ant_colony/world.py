@@ -47,8 +47,12 @@ class World:
             )
         )
 
+        nest = self.nest
         for ant_id in range(settings.STARTING_ANTS):
-            self.add_entity(Ant(ant_id, rng=self._rng))
+            ant = Ant(ant_id, rng=self._rng)
+            ant.x = nest.x
+            ant.y = nest.y
+            self.add_entity(ant)
 
         for _ in range(settings.STARTING_FOOD_SOURCES):
             self.add_entity(self._spawn_food())
@@ -188,18 +192,28 @@ class World:
             self._assign_nest_target(ant)
 
         for entity in tuple(self._entities):
-            entity.update()
+            if not isinstance(entity, Ant):
+                entity.update()
 
+        for ant in self.ants:
+            self._update_ant_movement(ant)
+
+        just_deposited: list[Ant] = []
         for ant in self.ants:
             self._collect_food_for(ant)
             self._assign_nest_target(ant)
             deposited_nutrition = self._deposit_food_for(ant)
-
             if deposited_nutrition > 0:
-                self._assign_food_target(ant, ())
+                just_deposited.append(ant)
 
         self._deposit_pheromones()
         self._process_upkeep()
+
+        # Process post-deposit return-trip selection in ascending ID order to
+        # keep the behaviour deterministic regardless of deposit order.
+        for ant in sorted(just_deposited, key=lambda a: a.id):
+            self._assign_food_target(ant, ())
+
         self._maybe_spawn_ant()
         self._remove_depleted_resources()
         self._remove_depleted_pheromones()
@@ -405,17 +419,46 @@ class World:
 
             self._next_pheromone_id += 1
 
-    def _process_upkeep(self) -> None:
-        """Refuel ants at the nest in ascending ID order.
+    def _update_ant_movement(self, ant: Ant) -> None:
+        """Move an ant for one tick, gating wandering departure on nest proximity.
 
+        A wandering ant that is physically at the nest must pay the one-time
+        excursion cost before it can leave.  If it cannot afford to depart,
+        only hydration decay runs and movement is suppressed this tick.
+        """
+        nest = self.nest
+        at_nest = ant.intersects_entity(
+            nest,
+            padding=settings.ANT_INTERACTION_RADIUS,
+        )
+
+        if at_nest and not ant.on_excursion and ant.state == AntState.WANDERING:
+            if not ant.depart():
+                # Insufficient energy — decay hydration only, no movement.
+                ant.hydration.decay(settings.ANT_HYDRATION_DECAY_PER_UPDATE)
+                return
+
+        ant.update()
+
+    def _process_upkeep(self) -> None:
+        """Refuel ants physically at the nest in ascending ID order.
+
+        An ant must be (a) spatially within the nest interaction boundary and
+        (b) not currently on an excursion to be eligible for refuelling.
         Each 10-energy increment costs 1 nutrition from the nest reserve.
         Colony upkeep has priority over spawning.
         """
+        nest = self.nest
         for ant in sorted(self.ants, key=lambda a: a.id):
             if ant.on_excursion:
                 continue
+            if not ant.intersects_entity(
+                nest,
+                padding=settings.ANT_INTERACTION_RADIUS,
+            ):
+                continue
             while not ant.energy.is_full:
-                if not self.nest.consume(settings.ANT_REFUEL_FOOD_COST):
+                if not nest.consume(settings.ANT_REFUEL_FOOD_COST):
                     break
                 ant.energy.restore(settings.ANT_REFUEL_ENERGY_AMOUNT)
 

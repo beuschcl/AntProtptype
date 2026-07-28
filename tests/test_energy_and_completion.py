@@ -45,13 +45,14 @@ def _world_with_reserve(reserve: int, seed: int = 42) -> World:
 
 
 def _suppress_food_and_freeze_ants(world: World) -> None:
-    """Move all food off-screen and zero ant speed so they stay put."""
+    """Move all food off-screen and move ants to the nest with zero speed."""
+    nest = world.nest
     for food in world.food:
         food.x = settings.WORLD_WIDTH
         food.y = settings.WORLD_HEIGHT
     for ant in world.ants:
-        ant.x = 0
-        ant.y = 0
+        ant.x = nest.x
+        ant.y = nest.y
         ant.speed = 0
 
 
@@ -311,9 +312,12 @@ def test_returning_ant_refuels_at_nest() -> None:
     """An ant that just arrived at the nest should be refuelled next upkeep."""
     world = _seeded_world()
     ant = world.ants[0]
-    # Simulate returned state: mark arrived, partially drain energy
+    # Simulate returned state: mark arrived, drain energy *below* the departure
+    # threshold so the movement gate cannot charge departure this tick and we
+    # can observe upkeep in isolation.
     ant.arrive()
-    ant.energy.spend(settings.ANT_REFUEL_ENERGY_AMOUNT)
+    low_energy = settings.ANT_EXCURSION_ENERGY_COST - 1
+    ant.energy.spend(settings.ANT_MAX_ENERGY - low_energy)
     before = ant.energy.current
 
     # Provide exactly enough nutrition for one refuel increment
@@ -337,7 +341,8 @@ def test_refuel_consumes_nest_nutrition() -> None:
     world = _seeded_world()
     ant = world.ants[0]
     ant.arrive()
-    ant.energy.spend(settings.ANT_REFUEL_ENERGY_AMOUNT)
+    # Drain energy below the departure threshold so upkeep can be observed.
+    ant.energy.spend(settings.ANT_MAX_ENERGY - (settings.ANT_EXCURSION_ENERGY_COST - 1))
 
     world.nest.deposit(
         (
@@ -362,7 +367,8 @@ def test_insufficient_nest_nutrition_blocks_refuel() -> None:
     world = _seeded_world()
     ant = world.ants[0]
     ant.arrive()
-    ant.energy.spend(settings.ANT_REFUEL_ENERGY_AMOUNT * 3)
+    # Drain energy below the departure threshold so upkeep is attempted.
+    ant.energy.spend(settings.ANT_MAX_ENERGY - (settings.ANT_EXCURSION_ENERGY_COST - 1))
     before = ant.energy.current
 
     # Give no nutrition to the nest
@@ -377,8 +383,9 @@ def test_refueling_occurs_before_spawning() -> None:
     """Nutrition spent on refuelling should reduce what is available for spawning."""
     world = _seeded_world()
 
-    # Set up two at-nest ants with low energy, and exactly enough nutrition
-    # to refuel one increment for each ant but NOT enough to also spawn.
+    # Set up two at-nest ants with energy below the departure threshold so the
+    # movement gate cannot charge departure this tick and upkeep will run.
+    # Provide exactly enough nutrition to refuel both ants but NOT enough to spawn.
     total_refuel_cost = settings.ANT_REFUEL_FOOD_COST * 2
     nest_reserve = total_refuel_cost  # not enough to also spawn
 
@@ -394,7 +401,9 @@ def test_refueling_occurs_before_spawning() -> None:
 
     for ant in world.ants:
         ant.arrive()
-        ant.energy.spend(settings.ANT_REFUEL_ENERGY_AMOUNT)
+        ant.energy.spend(
+            settings.ANT_MAX_ENERGY - (settings.ANT_EXCURSION_ENERGY_COST - 1)
+        )
 
     _suppress_food_and_freeze_ants(world)
     before_ants = len(world.ants)
@@ -414,11 +423,13 @@ def test_refueling_occurs_in_ascending_id_order() -> None:
     first_ant = ants_by_id[0]
     second_ant = ants_by_id[1]
 
-    # Drain energy for both ants
+    # Drain energy below the departure threshold so the movement gate cannot
+    # charge departure this tick, ensuring upkeep can run for both ants.
+    low_energy = settings.ANT_EXCURSION_ENERGY_COST - 1
     first_ant.arrive()
     second_ant.arrive()
-    first_ant.energy.spend(settings.ANT_REFUEL_ENERGY_AMOUNT)
-    second_ant.energy.spend(settings.ANT_REFUEL_ENERGY_AMOUNT)
+    first_ant.energy.spend(settings.ANT_MAX_ENERGY - low_energy)
+    second_ant.energy.spend(settings.ANT_MAX_ENERGY - low_energy)
 
     # Deposit only enough for one refuel
     world.nest.deposit(
@@ -435,8 +446,8 @@ def test_refueling_occurs_in_ascending_id_order() -> None:
     world.update()
 
     # First ant (lowest ID) must have been refuelled; second ant must not.
-    assert first_ant.energy.current == settings.ANT_MAX_ENERGY
-    assert second_ant.energy.current < settings.ANT_MAX_ENERGY
+    assert first_ant.energy.current == low_energy + settings.ANT_REFUEL_ENERGY_AMOUNT
+    assert second_ant.energy.current == low_energy
 
 
 # ---------------------------------------------------------------------------
@@ -676,3 +687,184 @@ def test_inspector_selected_ant_lines_include_energy() -> None:
     assert len(energy_lines) == 1
     expected = f"Energy: {ant.energy.current}/{ant.energy.maximum}"
     assert energy_lines[0] == expected
+
+
+# ---------------------------------------------------------------------------
+# Regression tests — spatial/ordering behavioral invariants
+# ---------------------------------------------------------------------------
+
+
+def test_remote_ant_not_at_nest_cannot_refuel() -> None:
+    """A non-nest ant must not be refuelled even when not on excursion."""
+    world = _seeded_world()
+    ant = world.ants[0]
+
+    # Place the ant far away from the nest and mark it as arrived (not on excursion).
+    ant.x = 0
+    ant.y = 0
+    ant.speed = 0
+    ant.arrive()
+    # Drain energy but keep it above the departure cost so _assign_food_target
+    # doesn't accidentally prevent movement — the key is the spatial check.
+    ant.energy.spend(settings.ANT_EXCURSION_ENERGY_COST)
+    before = ant.energy.current
+
+    # Give the nest plenty of nutrition
+    world.nest.deposit(
+        (
+            ResourcePortion(
+                source_id=99,
+                resource_type=ResourceType.FOOD,
+                value=100,
+            ),
+        )
+    )
+    # Move food off-screen so no collection happens
+    for food in world.food:
+        food.x = settings.WORLD_WIDTH
+        food.y = settings.WORLD_HEIGHT
+
+    world.update()
+
+    # A non-excursion ant that is not physically at the nest must not be refuelled.
+    assert ant.energy.current == before
+
+
+def test_targetless_wandering_departure_from_nest_costs_excursion_energy() -> None:
+    """A wandering ant leaving the nest with no food target pays one departure cost."""
+    world = _seeded_world()
+
+    # Move all food away so no target is ever assigned — pure wandering departure.
+    for food in world.food:
+        food.x = settings.WORLD_WIDTH
+        food.y = settings.WORLD_HEIGHT
+
+    ant = world.ants[0]
+    # Initial ants start at the nest fully energized; keep speed non-zero
+    # so the ant actually wanders out this tick.
+    assert ant.energy.is_full
+    assert not ant.on_excursion
+
+    world.update()
+
+    # The ant should have paid exactly one departure cost and be on excursion.
+    expected = settings.ANT_MAX_ENERGY - settings.ANT_EXCURSION_ENERGY_COST
+    assert ant.energy.current == expected
+    assert ant.on_excursion
+
+
+def test_underpowered_ant_with_no_nutrition_stays_at_nest() -> None:
+    """An at-nest ant below the departure threshold must not move with no nutrition."""
+    world = _seeded_world()
+    ant = world.ants[0]
+
+    # Drain energy below the departure threshold (initial ants start at nest).
+    ant.energy.spend(settings.ANT_MAX_ENERGY - (settings.ANT_EXCURSION_ENERGY_COST - 1))
+
+    # No nutrition in nest (nest starts empty).
+    for food in world.food:
+        food.x = settings.WORLD_WIDTH
+        food.y = settings.WORLD_HEIGHT
+
+    pos_before = (ant.x, ant.y)
+
+    world.update()
+
+    # Ant must remain at its original position and stay not-on-excursion.
+    assert ant.x == pos_before[0]
+    assert ant.y == pos_before[1]
+    assert not ant.on_excursion
+
+
+def test_returning_ant_refuels_before_paying_for_next_departure() -> None:
+    """Post-deposit upkeep runs before the return-trip departure.
+
+    The ant must be refuelled first; only then can it afford to depart for the
+    remembered food source in the same update.
+    """
+    world = _seeded_world()
+    ant = world.ants[0]
+    nest = world.nest
+    food = world.food[0]
+
+    # Place food at a fixed position so the ant can remember it.
+    food.x = 300
+    food.y = 300
+
+    # Simulate the ant having departed on a trip and returned with low energy.
+    # Use the public depart() API to set the excursion flag, then drain energy
+    # further so it is below the departure threshold (9 < 10).
+    ant.depart()  # energy: 100 → 90, on_excursion = True
+    ant.energy.spend(90 - (settings.ANT_EXCURSION_ENERGY_COST - 1))  # energy → 9
+
+    # Give the ant food to deposit (simulating a completed collection trip).
+    ant.inventory.add(
+        ResourcePortion(
+            source_id=food.id,
+            resource_type=ResourceType.FOOD,
+            value=5,
+        )
+    )
+    ant.select_nest_target(nest)
+    ant.x = nest.x
+    ant.y = nest.y
+
+    # Let the ant remember where the food is.
+    ant.observe(food)
+
+    # Provide exactly one refuel increment so upkeep can restore enough energy
+    # for the ant to afford a departure after refuelling.
+    nest.deposit(
+        (
+            ResourcePortion(
+                source_id=99,
+                resource_type=ResourceType.FOOD,
+                value=settings.ANT_REFUEL_FOOD_COST,
+            ),
+        )
+    )
+
+    # Suppress other ants so only this ant interacts.
+    for other_ant in world.ants:
+        if other_ant is not ant:
+            other_ant.x = settings.WORLD_WIDTH
+            other_ant.y = settings.WORLD_HEIGHT
+            other_ant.speed = 0
+    # Keep `food` in place; move other food sources off-screen.
+    for other_food in world.food[1:]:
+        other_food.x = settings.WORLD_WIDTH
+        other_food.y = settings.WORLD_HEIGHT
+
+    world.update()
+
+    # If upkeep ran before return-trip selection:
+    #   deposit → arrive (energy 9) → upkeep: 9+10=19 → depart (19>=10): 19-10=9
+    # The ant must have a food target and be on excursion, proving the departure
+    # succeeded only because refuelling happened first.
+    assert ant.on_excursion
+    assert ant.food_target is food
+
+
+def test_initial_ants_start_at_nest_and_pay_on_first_departure() -> None:
+    """Initial ants begin at the nest fully energized; first wander costs 10."""
+    world = _seeded_world()
+
+    nest_x, nest_y = settings.NEST_POSITION
+    for ant in world.ants:
+        assert ant.x == nest_x
+        assert ant.y == nest_y
+        assert ant.energy.is_full
+        assert not ant.on_excursion
+
+    # Move all food away so no food-target departure is triggered — test pure wandering.
+    for food in world.food:
+        food.x = settings.WORLD_WIDTH
+        food.y = settings.WORLD_HEIGHT
+
+    world.update()
+
+    # Every initial ant must have paid exactly one departure cost.
+    expected = settings.ANT_MAX_ENERGY - settings.ANT_EXCURSION_ENERGY_COST
+    for ant in world.ants:
+        assert ant.energy.current == expected
+        assert ant.on_excursion

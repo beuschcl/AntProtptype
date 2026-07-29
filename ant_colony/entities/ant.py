@@ -164,6 +164,7 @@ class Ant(Entity):
         if food.is_depleted:
             return False
 
+
         self._nest_target = None
         self._food_target = food
         self._food_target_source = source

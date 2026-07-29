@@ -15,8 +15,6 @@ class InspectorSnapshot:
     ant_count: int
     food_source_count: int
     remaining_food_portions: int
-    water_source_count: int
-    building_material_source_count: int
     nest_food_reserve: int
     delivered_portions: int
     pheromone_count: int
@@ -30,8 +28,6 @@ class InspectorSnapshot:
     selected_ant_inventory_capacity: int | None = None
     selected_ant_knowledge_count: int | None = None
     selected_ant_target: str | None = None
-    selected_ant_hydration: float | None = None
-    selected_ant_hydration_max: float | None = None
     selected_ant_energy: int | None = None
     selected_ant_energy_max: int | None = None
 
@@ -49,10 +45,6 @@ class InspectorSnapshot:
                 remaining_food_portions=sum(
                     food.quantity
                     for food in world.food
-                ),
-                water_source_count=len(world.water),
-                building_material_source_count=(
-                    len(world.building_materials)
                 ),
                 nest_food_reserve=world.nest.food_reserve,
                 delivered_portions=world.nest.delivered_portions,
@@ -77,10 +69,6 @@ class InspectorSnapshot:
                 food.quantity
                 for food in world.food
             ),
-            water_source_count=len(world.water),
-            building_material_source_count=(
-                len(world.building_materials)
-            ),
             nest_food_reserve=world.nest.food_reserve,
             delivered_portions=world.nest.delivered_portions,
             pheromone_count=len(world.pheromones),
@@ -94,8 +82,6 @@ class InspectorSnapshot:
             selected_ant_inventory_capacity=ant.inventory.capacity,
             selected_ant_knowledge_count=ant.knowledge.count(),
             selected_ant_target=cls._target_description(ant),
-            selected_ant_hydration=ant.hydration.current,
-            selected_ant_hydration_max=ant.hydration.maximum,
             selected_ant_energy=ant.energy.current,
             selected_ant_energy_max=ant.energy.maximum,
         )

@@ -1,8 +1,6 @@
 import random
 
 from ant_colony.config import settings
-from ant_colony.entities.building_material import BuildingMaterial
-from ant_colony.entities.water import Water
 from ant_colony.world import World
 
 
@@ -121,49 +119,6 @@ def test_replacement_food_has_a_new_unique_id() -> None:
     assert len(replacement_ids) == 1
     new_id = next(iter(replacement_ids))
     assert new_id not in original_ids
-
-
-# ---------------------------------------------------------------------------
-# Other resource types must NOT trigger food spawning
-# ---------------------------------------------------------------------------
-
-
-def test_depleting_water_does_not_spawn_food() -> None:
-    world = _seeded_world()
-    initial_food_count = len(world.food)
-
-    water = Water(
-        water_id=999,
-        x=100,
-        y=100,
-        hydration=3,
-        quantity=1,
-    )
-    world.add_entity(water)
-    water.collect()
-    world.update()
-
-    assert water not in world.entities
-    assert len(world.food) == initial_food_count
-
-
-def test_depleting_building_material_does_not_spawn_food() -> None:
-    world = _seeded_world()
-    initial_food_count = len(world.food)
-
-    material = BuildingMaterial(
-        material_id=999,
-        x=100,
-        y=100,
-        construction_value=2,
-        quantity=1,
-    )
-    world.add_entity(material)
-    material.collect()
-    world.update()
-
-    assert material not in world.entities
-    assert len(world.food) == initial_food_count
 
 
 # ---------------------------------------------------------------------------

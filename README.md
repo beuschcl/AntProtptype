@@ -7,8 +7,10 @@ The project is also being used as a structured Python learning project focused o
 ## Current capabilities
 
 - Pygame simulation window
+- Food-only colony loop: ants scout, collect food, return to nest, nest spends
+  food on energy upkeep, colony grows to 50 ants
 - Ant entities with randomized movement
-- Nest and food entities
+- Nest and food entities (no water or building-material simulation resources)
 - Ant selection with a mouse click
 - Inspector panel for selected ants
 - Camera abstraction

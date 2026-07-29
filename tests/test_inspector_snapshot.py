@@ -5,6 +5,7 @@ from ant_colony.components import (
     ResourceType,
 )
 from ant_colony.entities.pheromone import Pheromone
+from ant_colony.ui.inspector import Inspector
 from ant_colony.ui.inspector_snapshot import (
     InspectorSnapshot,
 )
@@ -79,6 +80,8 @@ def test_snapshot_contains_selected_ant_details() -> None:
         for food in world.food
     )
     assert snapshot.selected_ant_target == "None"
+    assert not hasattr(snapshot, "selected_ant_hydration")
+    assert not hasattr(snapshot, "selected_ant_hydration_max")
 
 
 def test_snapshot_identifies_food_target() -> None:
@@ -174,3 +177,16 @@ def test_snapshot_contains_pheromone_count() -> None:
     snapshot = InspectorSnapshot.from_world(world)
 
     assert snapshot.pheromone_count == 2
+
+
+def test_inspector_selected_ant_lines_are_food_and_energy_only() -> None:
+    world = World()
+    ant = world.ants[0]
+    world.selected_ant = ant
+
+    snapshot = InspectorSnapshot.from_world(world)
+    lines = Inspector._selected_ant_lines(snapshot)
+
+    assert any(line.startswith("Carried food:") for line in lines)
+    assert any(line.startswith("Energy:") for line in lines)
+    assert not any(line.startswith("Hydration:") for line in lines)

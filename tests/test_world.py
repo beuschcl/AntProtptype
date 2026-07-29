@@ -8,15 +8,11 @@ from ant_colony.components import (
 )
 from ant_colony.config import settings
 from ant_colony.entities.ant import Ant
-from ant_colony.entities.building_material import (
-    BuildingMaterial,
-)
 from ant_colony.entities.entity import Entity
 from ant_colony.entities.food import Food
 from ant_colony.entities.nest import Nest
 from ant_colony.entities.pheromone import Pheromone
 from ant_colony.entities.resource import Resource
-from ant_colony.entities.water import Water
 from ant_colony.knowledge import EntityObservation
 from ant_colony.world import World
 
@@ -47,8 +43,6 @@ def test_entities_contains_every_world_entity() -> None:
         len(world.ants)
         + 1
         + len(world.food)
-        + len(world.water)
-        + len(world.building_materials)
     )
 
     assert len(world.entities) == expected_count
@@ -185,14 +179,6 @@ def test_click_near_ant_selects_ant() -> None:
     world.handle_click((100, 100))
 
     assert world.selected_ant is ant
-
-
-def test_world_has_water_at_configured_position() -> None:
-    world = World()
-
-    water = world.water[0]
-
-    assert (water.x, water.y) == settings.WATER_POSITION
 
 
 def test_world_finds_entity_under_position() -> None:
@@ -859,50 +845,12 @@ def test_world_removes_pheromones_when_source_food_is_removed() -> None:
     assert pheromone not in world.entities
     assert pheromone not in world.pheromones
 
-def test_world_exposes_all_resource_types() -> None:
+def test_world_exposes_food_resources() -> None:
     world = World()
 
     assert len(world.food) == settings.STARTING_FOOD_SOURCES
-    assert len(world.water) == 1
-    assert len(world.building_materials) == 1
 
     assert all(
         isinstance(resource, Resource)
         for resource in world.resources
     )
-
-
-def test_world_removes_depleted_water() -> None:
-    world = World()
-
-    water = Water(
-        water_id=999,
-        x=100,
-        y=100,
-        hydration=3,
-        quantity=1,
-    )
-    world.add_entity(water)
-
-    water.collect()
-    world.update()
-
-    assert water not in world.entities
-
-
-def test_world_removes_depleted_building_material() -> None:
-    world = World()
-
-    material = BuildingMaterial(
-        material_id=999,
-        x=100,
-        y=100,
-        construction_value=2,
-        quantity=1,
-    )
-    world.add_entity(material)
-
-    material.collect()
-    world.update()
-
-    assert material not in world.entities

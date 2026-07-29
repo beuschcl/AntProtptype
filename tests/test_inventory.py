@@ -118,23 +118,3 @@ def test_resource_portion_rejects_invalid_value() -> None:
             value=0,
         )
 
-
-def test_inventory_adds_multiple_resource_types() -> None:
-    inventory = Inventory(capacity=2)
-    water_portion = ResourcePortion(
-        source_id=1,
-        resource_type=ResourceType.WATER,
-        value=3,
-    )
-    building_material_portion = ResourcePortion(
-        source_id=2,
-        resource_type=ResourceType.BUILDING_MATERIAL,
-        value=4,
-    )
-
-    assert inventory.add(water_portion)
-    assert inventory.add(building_material_portion)
-    assert inventory.items == (
-        water_portion,
-        building_material_portion,
-    )

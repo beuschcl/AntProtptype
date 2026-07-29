@@ -52,8 +52,12 @@ class World:
             ant.y = nest.y
             self.add_entity(ant)
 
-        for _ in range(settings.STARTING_FOOD_SOURCES):
-            self.add_entity(self._spawn_food())
+        for source_index in range(
+            settings.STARTING_FOOD_SOURCES
+        ):
+            self.add_entity(
+                self._spawn_initial_food(source_index)
+            )
 
     @property
     def entities(self) -> tuple[Entity, ...]:
@@ -486,6 +490,42 @@ class World:
             nutrition=5,
             quantity=10,
         )
+
+    def _spawn_initial_food(
+        self,
+        source_index: int,
+    ) -> Food:
+        nest_x, nest_y = settings.NEST_POSITION
+        if source_index < len(
+            settings.INITIAL_FOOD_SOURCE_OFFSETS
+        ):
+            offset_x, offset_y = (
+                settings.INITIAL_FOOD_SOURCE_OFFSETS[
+                    source_index
+                ]
+            )
+            x = nest_x + offset_x
+            y = nest_y + offset_y
+            bounded_x = min(
+                max(x, settings.FOOD_RADIUS),
+                settings.WORLD_WIDTH
+                - settings.FOOD_RADIUS,
+            )
+            bounded_y = min(
+                max(y, settings.FOOD_RADIUS),
+                settings.WORLD_HEIGHT
+                - settings.FOOD_RADIUS,
+            )
+            food_id = self._next_food_id
+            self._next_food_id += 1
+            return Food(
+                food_id=food_id,
+                x=bounded_x,
+                y=bounded_y,
+                nutrition=5,
+                quantity=10,
+            )
+        return self._spawn_food()
 
     def _remove_depleted_pheromones(self) -> None:
         for pheromone in self.pheromones:

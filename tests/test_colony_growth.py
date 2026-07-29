@@ -1,5 +1,6 @@
 """Tests for colony growth and food-only world setup."""
 
+import importlib
 import random
 
 import pytest
@@ -37,6 +38,42 @@ def test_world_no_longer_exposes_water_or_building_material_collections() -> Non
     world = _seeded_world()
     assert not hasattr(world, "water")
     assert not hasattr(world, "building_materials")
+
+
+def test_hydration_water_and_material_modules_are_removed() -> None:
+    removed_modules = (
+        "ant_colony.components.hydration",
+        "ant_colony.entities.water",
+        "ant_colony.entities.building_material",
+    )
+
+    for module_name in removed_modules:
+        with pytest.raises(ModuleNotFoundError):
+            importlib.import_module(module_name)
+
+
+def test_nest_starts_centered_in_world() -> None:
+    world = _seeded_world()
+    assert world.nest.x == settings.WORLD_WIDTH // 2
+    assert world.nest.y == settings.WORLD_HEIGHT // 2
+
+
+def test_initial_food_sources_spawn_around_centered_nest_within_world_bounds() -> None:
+    world = _seeded_world()
+    min_nest_food_distance = settings.NEST_RADIUS + settings.FOOD_RADIUS
+
+    for food in world.food:
+        assert (
+            settings.FOOD_RADIUS
+            <= food.x
+            <= settings.WORLD_WIDTH - settings.FOOD_RADIUS
+        )
+        assert (
+            settings.FOOD_RADIUS
+            <= food.y
+            <= settings.WORLD_HEIGHT - settings.FOOD_RADIUS
+        )
+        assert world.nest.distance_to(food) > min_nest_food_distance
 
 
 def test_nest_consume_deducts_exact_cost() -> None:

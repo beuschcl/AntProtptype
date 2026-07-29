@@ -29,14 +29,14 @@ def test_initial_food_positions_are_deterministic_with_seeded_rng() -> None:
     assert positions_a == positions_b
 
 
-def test_different_seeds_produce_different_layouts() -> None:
+def test_initial_food_layout_is_seed_independent() -> None:
     world_a = _seeded_world(seed=1)
     world_b = _seeded_world(seed=2)
 
     positions_a = [(f.x, f.y) for f in world_a.food]
     positions_b = [(f.x, f.y) for f in world_b.food]
 
-    assert positions_a != positions_b
+    assert positions_a == positions_b
 
 
 def test_every_food_source_is_inside_world_bounds() -> None:

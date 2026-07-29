@@ -1,6 +1,3 @@
-import logging
-from importlib.resources import as_file, files
-
 import pygame
 
 from ant_colony.config import settings
@@ -16,14 +13,6 @@ from ant_colony.graphics.primitives import (
 from ant_colony.ui.window_layout import WindowLayout
 from ant_colony.world import World
 
-logger = logging.getLogger(__name__)
-PACKAGE_NAME = "ant_colony"
-WORLD_BACKGROUND_ASSET = (
-    "assets/backgrounds/old-growth-forest-map.png"
-)
-ANT_WORKER_ASSET = "assets/ants/meadow-ant-worker-2x2.png"
-ANT_WORKER_NATIVE_HEADING = -90
-
 
 class Renderer:
     def __init__(
@@ -33,10 +22,6 @@ class Renderer:
     ) -> None:
         self.screen = screen
         self.camera = camera
-        self.world_background = self._load_world_background()
-        self.ant_worker_sprite = self._load_ant_worker_sprite()
-        self._scaled_background = self.world_background
-        self._scaled_background_size = self.world_background.get_size()
         self._world_clip_rect = pygame.Rect(
             0, 0, settings.WORLD_WIDTH, settings.WORLD_HEIGHT
         )
@@ -66,8 +51,12 @@ class Renderer:
             (settings.WORLD_WIDTH, settings.WORLD_HEIGHT),
         )
         self.screen.fill(settings.BACKGROUND_COLOR)
-        background = self._background_for(layout.world_viewport.size)
-        self.screen.blit(background, layout.world_viewport.topleft)
+        pygame.draw.rect(
+            self.screen,
+            settings.BACKGROUND_COLOR,
+            layout.world_viewport,
+        )
+        self._draw_world_bounds(layout)
         cursor_screen = self._cursor_screen_position()
         cursor_world: tuple[float, float] | None
         if cursor_screen is None:
@@ -127,53 +116,8 @@ class Renderer:
             )
 
     def _draw_entity(self, entity: Entity) -> None:
-        if (
-            isinstance(entity, Ant)
-            and self.ant_worker_sprite is not None
-        ):
-            self._draw_ant(entity)
-            return
-
         for shape in entity.shapes():
             self._draw_shape(shape)
-
-    def _draw_ant(self, ant: Ant) -> None:
-        if self.ant_worker_sprite is None:
-            return
-
-        source_width, source_height = (
-            self.ant_worker_sprite.get_size()
-        )
-        target_height = self.camera.scale_length(
-            settings.ANT_SPRITE_HEIGHT
-        )
-        target_width = max(
-            1,
-            round(
-                target_height
-                * source_width
-                / source_height
-            ),
-        )
-        scaled_sprite = pygame.transform.smoothscale(
-            self.ant_worker_sprite,
-            (target_width, target_height),
-        )
-        rotated_sprite = pygame.transform.rotate(
-            scaled_sprite,
-            ANT_WORKER_NATIVE_HEADING - ant.heading,
-        )
-        center = self.camera.world_to_screen(
-            ant.x,
-            ant.y,
-        )
-        destination = rotated_sprite.get_rect(
-            center=center,
-        )
-        self.screen.blit(
-            rotated_sprite,
-            destination,
-        )
 
     def _draw_shape(self, shape: Shape) -> None:
         match shape:
@@ -404,78 +348,13 @@ class Renderer:
             layout.divider_rect,
         )
 
-    def _background_for(
+    def _draw_world_bounds(
         self,
-        size: tuple[int, int],
-    ) -> pygame.Surface:
-        if size != self._scaled_background_size:
-            self._scaled_background = pygame.transform.smoothscale(
-                self.world_background,
-                size,
-            )
-            self._scaled_background_size = size
-        return self._scaled_background
-
-    @staticmethod
-    def _load_world_background() -> pygame.Surface:
-        background_resource = files(PACKAGE_NAME).joinpath(
-            WORLD_BACKGROUND_ASSET
+        layout: WindowLayout,
+    ) -> None:
+        pygame.draw.rect(
+            self.screen,
+            settings.SCOPE_BOUNDARY_COLOR,
+            layout.world_viewport,
+            width=2,
         )
-        attempted_location = (
-            f"{PACKAGE_NAME}/{WORLD_BACKGROUND_ASSET}"
-        )
-        try:
-            with as_file(background_resource) as background_path:
-                background = pygame.image.load(
-                    str(background_path)
-                )
-        except (
-            FileNotFoundError,
-            pygame.error,
-        ) as error:
-            logger.warning(
-                "Failed to load world background from %s: %s",
-                attempted_location,
-                error,
-            )
-            fallback = pygame.Surface(
-                (
-                    settings.WORLD_WIDTH,
-                    settings.WORLD_HEIGHT,
-                )
-            )
-            fallback.fill(settings.BACKGROUND_COLOR)
-            return fallback
-
-        target_size = (
-            settings.WORLD_WIDTH,
-            settings.WORLD_HEIGHT,
-        )
-        if background.get_size() == target_size:
-            return background
-
-        return pygame.transform.scale(background, target_size)
-
-    @staticmethod
-    def _load_ant_worker_sprite() -> pygame.Surface | None:
-        sprite_resource = files(PACKAGE_NAME).joinpath(
-            ANT_WORKER_ASSET
-        )
-        attempted_location = (
-            f"{PACKAGE_NAME}/{ANT_WORKER_ASSET}"
-        )
-        try:
-            with as_file(sprite_resource) as sprite_path:
-                return pygame.image.load(
-                    str(sprite_path)
-                )
-        except (
-            FileNotFoundError,
-            pygame.error,
-        ) as error:
-            logger.warning(
-                "Failed to load ant worker sprite from %s: %s",
-                attempted_location,
-                error,
-            )
-            return None

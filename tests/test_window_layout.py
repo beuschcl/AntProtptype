@@ -1,6 +1,8 @@
 import pygame
+import pytest
 
 from ant_colony.config import settings
+from ant_colony.graphics.camera import Camera
 from ant_colony.ui.window_layout import WindowController, WindowLayout
 
 
@@ -23,6 +25,46 @@ def test_layout_clamps_inspector_width() -> None:
     assert narrow.inspector_rect.width + settings.INSPECTOR_DIVIDER_WIDTH == 400
     assert wide.inspector_rect.width + settings.INSPECTOR_DIVIDER_WIDTH == (
         settings.MIN_INSPECTOR_WIDTH
+    )
+
+
+def test_default_window_layout_world_edges_match_world_bounds() -> None:
+    layout = WindowLayout.calculate(
+        (settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT),
+        settings.INSPECTOR_WIDTH,
+    )
+    camera = Camera()
+    camera.fit(
+        layout.world_viewport,
+        (settings.WORLD_WIDTH, settings.WORLD_HEIGHT),
+    )
+
+    assert camera.screen_to_world(*layout.world_viewport.topleft) == (0.0, 0.0)
+    assert camera.screen_to_world(*layout.world_viewport.bottomright) == (
+        settings.WORLD_WIDTH,
+        settings.WORLD_HEIGHT,
+    )
+
+
+def test_fullscreen_layout_keeps_click_mapping_on_world_edges() -> None:
+    layout = WindowLayout.calculate((1920, 1080), settings.INSPECTOR_WIDTH)
+    camera = Camera()
+    camera.fit(
+        layout.world_viewport,
+        (settings.WORLD_WIDTH, settings.WORLD_HEIGHT),
+    )
+
+    top_left = camera.screen_to_world(*layout.world_viewport.topleft)
+    bottom_right = camera.screen_to_world(*layout.world_viewport.bottomright)
+
+    assert top_left == (0.0, 0.0)
+    assert bottom_right[0] == pytest.approx(
+        settings.WORLD_WIDTH,
+        abs=0.2,
+    )
+    assert bottom_right[1] == pytest.approx(
+        settings.WORLD_HEIGHT,
+        abs=0.2,
     )
 
 

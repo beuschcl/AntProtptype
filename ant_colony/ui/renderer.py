@@ -80,6 +80,7 @@ class Renderer:
 
         if self.show_hitboxes:
             self._draw_hitboxes(world)
+            self._draw_obstacle_bounds(world)
         if (
             self.show_radius_overlays
             and hovered_entity is not None
@@ -233,6 +234,29 @@ class Renderer:
                     color=settings.DEBUG_HITBOX_COLOR,
                     width=settings.DEBUG_HITBOX_WIDTH,
                 )
+            )
+
+    def _draw_obstacle_bounds(self, world: World) -> None:
+        for obstacle in world.obstacles:
+            left, top = self.camera.world_to_screen(
+                obstacle.left,
+                obstacle.top,
+            )
+            right, bottom = self.camera.world_to_screen(
+                obstacle.right,
+                obstacle.bottom,
+            )
+            rect = pygame.Rect(
+                min(left, right),
+                min(top, bottom),
+                abs(right - left),
+                abs(bottom - top),
+            )
+            pygame.draw.rect(
+                self.screen,
+                settings.DEBUG_OBSTACLE_COLOR,
+                rect,
+                settings.DEBUG_OBSTACLE_WIDTH,
             )
 
     def _draw_hovered_radii(self, entity: Entity) -> None:

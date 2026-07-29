@@ -3,6 +3,7 @@ from types import SimpleNamespace
 import pygame
 
 from ant_colony.config import settings
+from ant_colony.entities.ant import Ant
 from ant_colony.graphics.camera import Camera
 from ant_colony.ui import renderer as renderer_module
 from ant_colony.ui.window_layout import WindowLayout
@@ -138,11 +139,15 @@ def test_renderer_does_not_mutate_world_state(monkeypatch) -> None:
     assert repr(world) == before
 
 
-def test_renderer_draws_hover_radii_only_when_r_enabled(monkeypatch) -> None:
+def test_renderer_draws_all_radius_overlays_when_r_enabled(
+    monkeypatch,
+) -> None:
     screen = pygame.Surface((settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT))
     renderer = renderer_module.Renderer(screen, Camera())
     renderer.show_radius_overlays = True
     world = World()
+    if len(world.ants) < 2:
+        world.add_entity(Ant(ant_id=99))
     first_ant = world.ants[0]
     second_ant = world.ants[1]
     first_ant.x = 100
@@ -150,7 +155,6 @@ def test_renderer_draws_hover_radii_only_when_r_enabled(monkeypatch) -> None:
     second_ant.x = 300
     second_ant.y = 300
 
-    monkeypatch.setattr(pygame.mouse, "get_pos", lambda: (100, 100))
     captured_circles: list[renderer_module.Circle] = []
 
     original_draw_circle = renderer._draw_circle
@@ -163,6 +167,16 @@ def test_renderer_draws_hover_radii_only_when_r_enabled(monkeypatch) -> None:
 
     renderer.draw(world)
 
+    discovery_colors = {
+        circle.color
+        for circle in captured_circles
+        if circle.radius
+        in {
+            settings.ANT_DISCOVERABLE_RADIUS,
+            settings.FOOD_DISCOVERABLE_RADIUS,
+            settings.NEST_DISCOVERABLE_RADIUS,
+        }
+    }
     sense_rings = [
         circle
         for circle in captured_circles
@@ -171,8 +185,21 @@ def test_renderer_draws_hover_radii_only_when_r_enabled(monkeypatch) -> None:
             and circle.radius == settings.ANT_SENSE_RADIUS
         )
     ]
+    interaction_rings = [
+        circle
+        for circle in captured_circles
+        if (
+            circle.color == settings.DEBUG_INTERACTION_RADIUS_COLOR
+            and circle.radius
+            == settings.ANT_RADIUS + settings.ANT_INTERACTION_RADIUS
+        )
+    ]
 
-    assert len(sense_rings) == 1
+    assert settings.DEBUG_ANT_DISCOVERY_RADIUS_COLOR in discovery_colors
+    assert settings.DEBUG_FOOD_DISCOVERY_RADIUS_COLOR in discovery_colors
+    assert settings.DEBUG_NEST_DISCOVERY_RADIUS_COLOR in discovery_colors
+    assert len(sense_rings) == len(world.ants)
+    assert len(interaction_rings) == len(world.ants)
 
 
 def test_renderer_h_toggle_does_not_draw_hover_radii(monkeypatch) -> None:

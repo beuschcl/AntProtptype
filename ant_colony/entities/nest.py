@@ -93,11 +93,11 @@ class Nest(Entity):
             Polygon(
                 points=points,
                 color=settings.NEST_COLOR,
-                width=5,
+                width=settings.NEST_DRAW_WIDTH,
             ),
             Polygon(
                 points=points,
                 color=settings.NEST_OUTLINE_COLOR,
-                width=1,
+                width=settings.NEST_OUTLINE_WIDTH,
             ),
         )

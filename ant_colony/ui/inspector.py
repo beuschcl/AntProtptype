@@ -9,16 +9,10 @@ from ant_colony.world import World
 
 
 class Inspector:
-    LINE_HEIGHT = 25
-    SECTION_SPACING = 15
-    TOP_PADDING = 20
-    LEFT_PADDING = 20
-    FONT_SIZE = 24
-
     def __init__(self) -> None:
         self.font = pygame.font.SysFont(
             None,
-            self.FONT_SIZE,
+            settings.INSPECTOR_FONT_SIZE,
         )
 
     def draw(
@@ -33,8 +27,8 @@ class Inspector:
             layout.inspector_rect.x
             if layout is not None
             else settings.WORLD_WIDTH
-        ) + self.LEFT_PADDING
-        y = self.TOP_PADDING
+        ) + settings.INSPECTOR_LEFT_PADDING
+        y = settings.INSPECTOR_TOP_PADDING
 
         y = self._draw_lines(
             screen=screen,
@@ -46,7 +40,7 @@ class Inspector:
         if snapshot.selected_ant_id is None:
             return
 
-        y += self.SECTION_SPACING
+        y += settings.INSPECTOR_SECTION_SPACING
 
         self._draw_lines(
             screen=screen,
@@ -74,7 +68,7 @@ class Inspector:
                 (x, y),
             )
 
-            y += self.LINE_HEIGHT
+            y += settings.INSPECTOR_LINE_HEIGHT
 
         return y
 

@@ -55,6 +55,6 @@ class Food(Resource):
                     (self.x - radius, self.y),
                 ),
                 color=settings.FOOD_OUTLINE_COLOR,
-                width=2,
+                width=settings.FOOD_OUTLINE_WIDTH,
             ),
         )

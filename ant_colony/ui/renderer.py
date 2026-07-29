@@ -3,6 +3,9 @@ import pygame
 from ant_colony.config import settings
 from ant_colony.entities.ant import Ant
 from ant_colony.entities.entity import Entity
+from ant_colony.entities.food import Food
+from ant_colony.entities.nest import Nest
+from ant_colony.entities.pheromone import Pheromone
 from ant_colony.graphics.camera import Camera
 from ant_colony.graphics.primitives import (
     Circle,
@@ -30,7 +33,7 @@ class Renderer:
         self.show_radius_overlays = False
         if not pygame.font.get_init():
             pygame.font.init()
-        self.debug_font = pygame.font.SysFont(None, 18)
+        self.debug_font = pygame.font.SysFont(None, settings.DEBUG_FONT_SIZE)
 
     def set_screen(self, screen: pygame.Surface) -> None:
         self.screen = screen
@@ -61,13 +64,9 @@ class Renderer:
         cursor_world: tuple[float, float] | None
         if cursor_screen is None:
             cursor_world = None
-            hovered_entity = None
         else:
             cursor_world = self.camera.screen_to_world(
                 *cursor_screen
-            )
-            hovered_entity = world.entity_under_position(
-                cursor_world
             )
 
         self.screen.set_clip(self._world_clip_rect)
@@ -81,11 +80,8 @@ class Renderer:
         if self.show_hitboxes:
             self._draw_hitboxes(world)
             self._draw_obstacle_bounds(world)
-        if (
-            self.show_radius_overlays
-            and hovered_entity is not None
-        ):
-            self._draw_hovered_radii(hovered_entity)
+        if self.show_radius_overlays:
+            self._draw_radius_overlays(world)
 
         if world.selected_ant is not None:
             self._draw_selection_ring(world.selected_ant)
@@ -259,27 +255,61 @@ class Renderer:
                 settings.DEBUG_OBSTACLE_WIDTH,
             )
 
-    def _draw_hovered_radii(self, entity: Entity) -> None:
+    def _draw_radius_overlays(self, world: World) -> None:
+        for entity in world.entities:
+            self._draw_discovery_radius(entity)
+
+            if isinstance(entity, Ant):
+                self._draw_ant_sense_radius(entity)
+                self._draw_ant_interaction_radius(entity)
+
+    def _draw_discovery_radius(self, entity: Entity) -> None:
+        if entity.discoverable_radius <= 0:
+            return
+
         self._draw_circle(
             Circle(
                 x=entity.x,
                 y=entity.y,
                 radius=entity.discoverable_radius,
-                color=settings.DEBUG_DISCOVERY_RADIUS_COLOR,
-                width=2,
+                color=self._discovery_radius_color(entity),
+                width=settings.DEBUG_RADIUS_OVERLAY_WIDTH,
             )
         )
 
-        if isinstance(entity, Ant):
-            self._draw_circle(
-                Circle(
-                    x=entity.x,
-                    y=entity.y,
-                    radius=entity.senses.radius,
-                    color=settings.DEBUG_SENSE_RADIUS_COLOR,
-                    width=2,
-                )
+    def _draw_ant_sense_radius(self, ant: Ant) -> None:
+        self._draw_circle(
+            Circle(
+                x=ant.x,
+                y=ant.y,
+                radius=ant.senses.radius,
+                color=settings.DEBUG_SENSE_RADIUS_COLOR,
+                width=settings.DEBUG_RADIUS_OVERLAY_WIDTH,
             )
+        )
+
+    def _draw_ant_interaction_radius(self, ant: Ant) -> None:
+        self._draw_circle(
+            Circle(
+                x=ant.x,
+                y=ant.y,
+                radius=ant.hitbox_radius + settings.ANT_INTERACTION_RADIUS,
+                color=settings.DEBUG_INTERACTION_RADIUS_COLOR,
+                width=settings.DEBUG_RADIUS_OVERLAY_WIDTH,
+            )
+        )
+
+    @staticmethod
+    def _discovery_radius_color(entity: Entity) -> tuple[int, int, int]:
+        if isinstance(entity, Ant):
+            return settings.DEBUG_ANT_DISCOVERY_RADIUS_COLOR
+        if isinstance(entity, Food):
+            return settings.DEBUG_FOOD_DISCOVERY_RADIUS_COLOR
+        if isinstance(entity, Nest):
+            return settings.DEBUG_NEST_DISCOVERY_RADIUS_COLOR
+        if isinstance(entity, Pheromone):
+            return settings.DEBUG_PHEROMONE_DISCOVERY_RADIUS_COLOR
+        return settings.DEBUG_DISCOVERY_RADIUS_COLOR
 
     def _draw_coordinate_overlay(
         self,
@@ -291,8 +321,9 @@ class Renderer:
         )
         self._draw_debug_text(
             cursor_label,
-            self._world_clip_rect.left + 10,
-            self._world_clip_rect.bottom - 24,
+            self._world_clip_rect.left + settings.DEBUG_CURSOR_LABEL_MARGIN_X,
+            self._world_clip_rect.bottom
+            - settings.DEBUG_CURSOR_LABEL_BOTTOM_OFFSET,
         )
 
         for x in range(
@@ -306,8 +337,8 @@ class Renderer:
             )
             self._draw_debug_text(
                 str(x),
-                screen_x + 2,
-                screen_y + 2,
+                screen_x + settings.DEBUG_COORDINATE_LABEL_OFFSET,
+                screen_y + settings.DEBUG_COORDINATE_LABEL_OFFSET,
             )
 
         for y in range(
@@ -321,8 +352,8 @@ class Renderer:
             )
             self._draw_debug_text(
                 str(y),
-                screen_x + 2,
-                screen_y + 2,
+                screen_x + settings.DEBUG_COORDINATE_LABEL_OFFSET,
+                screen_y + settings.DEBUG_COORDINATE_LABEL_OFFSET,
             )
 
     def _draw_debug_text(
@@ -380,5 +411,5 @@ class Renderer:
             self.screen,
             settings.SCOPE_BOUNDARY_COLOR,
             layout.world_viewport,
-            width=2,
+            width=settings.WORLD_BOUNDS_WIDTH,
         )

@@ -19,11 +19,11 @@ def test_food_configuration() -> None:
 
     assert isinstance(fill_shape, Polygon)
     assert fill_shape.points == (
-        (100, 90),
-        (110, 100),
-        (100, 110),
-        (90, 100),
+        (100, 100 - settings.FOOD_RADIUS),
+        (100 + settings.FOOD_RADIUS, 100),
+        (100, 100 + settings.FOOD_RADIUS),
+        (100 - settings.FOOD_RADIUS, 100),
     )
     assert fill_shape.color == settings.FOOD_COLOR
-    assert outline_shape.width == 2
+    assert outline_shape.width == settings.FOOD_OUTLINE_WIDTH
     assert outline_shape.color == settings.FOOD_OUTLINE_COLOR

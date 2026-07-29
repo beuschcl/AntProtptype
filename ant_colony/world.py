@@ -533,7 +533,7 @@ class World:
             radius=settings.FOOD_RADIUS,
         ):
             attempts += 1
-            if attempts > 500:
+            if attempts > settings.FOOD_SPAWN_MAX_ATTEMPTS:
                 raise RuntimeError(
                     "Unable to place food in unblocked space."
                 )
@@ -550,8 +550,8 @@ class World:
             food_id=food_id,
             x=x,
             y=y,
-            nutrition=5,
-            quantity=10,
+            nutrition=settings.FOOD_NUTRITION,
+            quantity=settings.FOOD_QUANTITY,
         )
 
     def _spawn_initial_food(
@@ -582,8 +582,8 @@ class World:
                 food_id=food_id,
                 x=bounded_x,
                 y=bounded_y,
-                nutrition=5,
-                quantity=10,
+                nutrition=settings.FOOD_NUTRITION,
+                quantity=settings.FOOD_QUANTITY,
             )
         return self._spawn_food()
 

@@ -17,7 +17,7 @@ class Scenario:
 
 
 DEFAULT_SCENARIO = Scenario(
-    name="default_centered_colony",
+    name=settings.DEFAULT_SCENARIO_NAME,
     nest_position=settings.NEST_POSITION,
     initial_food_positions=tuple(
         (
@@ -29,22 +29,19 @@ DEFAULT_SCENARIO = Scenario(
 )
 
 NAVIGATION_TEST_ARENA = Scenario(
-    name="navigation_test_arena",
-    nest_position=(220, settings.WORLD_HEIGHT / 2),
+    name=settings.NAVIGATION_TEST_ARENA_NAME,
+    nest_position=settings.NAVIGATION_TEST_ARENA_NEST_POSITION,
     initial_food_positions=(
-        (780, settings.WORLD_HEIGHT / 2),
-        (820, settings.WORLD_HEIGHT / 2 - 30),
-        (820, settings.WORLD_HEIGHT / 2 + 30),
+        settings.NAVIGATION_TEST_ARENA_INITIAL_FOOD_POSITIONS
     ),
-    obstacles=(
-        RectangleObstacle(x=480, y=0, width=40, height=300),
-        RectangleObstacle(x=480, y=340, width=40, height=120),
+    obstacles=tuple(
         RectangleObstacle(
-            x=480,
-            y=580,
-            width=40,
-            height=settings.WORLD_HEIGHT - 580,
-        ),
+            x=x,
+            y=y,
+            width=width,
+            height=height,
+        )
+        for x, y, width, height in settings.NAVIGATION_TEST_ARENA_OBSTACLES
     ),
 )
 

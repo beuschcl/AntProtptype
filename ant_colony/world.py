@@ -14,7 +14,13 @@ from ant_colony.entities.food import Food
 from ant_colony.entities.nest import Nest
 from ant_colony.entities.pheromone import Pheromone
 from ant_colony.entities.resource import Resource
+from ant_colony.geometry import RectangleObstacle
 from ant_colony.knowledge import EntityObservation
+from ant_colony.scenarios import (
+    DEFAULT_SCENARIO,
+    Scenario,
+    get_scenario,
+)
 
 EntityType = TypeVar(
     "EntityType",
@@ -26,9 +32,18 @@ class World:
     def __init__(
         self,
         rng: _random_module.Random | None = None,
+        scenario: Scenario | str | None = None,
     ) -> None:
+        if scenario is None:
+            self._scenario = DEFAULT_SCENARIO
+        elif isinstance(scenario, str):
+            self._scenario = get_scenario(scenario)
+        else:
+            self._scenario = scenario
+
         self._entities: list[Entity] = []
         self.selected_ant: Ant | None = None
+        self._obstacles = self._scenario.obstacles
         self._next_pheromone_id = 1
         self._next_food_id = 1
         self._next_ant_id = settings.STARTING_ANTS
@@ -36,12 +51,14 @@ class World:
         self._colony_complete = False
         self._rng = rng if rng is not None else _random_module.Random()
 
-        self.add_entity(
-            Nest(
-                x=settings.NEST_POSITION[0],
-                y=settings.NEST_POSITION[1],
-            )
+        nest_x, nest_y = self._scenario.nest_position
+        self._require_spawn_position_available(
+            nest_x,
+            nest_y,
+            radius=settings.NEST_RADIUS,
+            label="nest",
         )
+        self.add_entity(Nest(x=nest_x, y=nest_y))
 
         nest = self.nest
         for ant_id in range(
@@ -50,6 +67,12 @@ class World:
             ant = Ant(ant_id, rng=self._rng)
             ant.x = nest.x
             ant.y = nest.y
+            self._require_spawn_position_available(
+                ant.x,
+                ant.y,
+                radius=ant.hitbox_radius,
+                label="initial ant",
+            )
             self.add_entity(ant)
 
         for source_index in range(
@@ -78,6 +101,14 @@ class World:
     @property
     def pheromones(self) -> tuple[Pheromone, ...]:
         return self.entities_of_type(Pheromone)
+
+    @property
+    def obstacles(self) -> tuple[RectangleObstacle, ...]:
+        return self._obstacles
+
+    @property
+    def scenario_name(self) -> str:
+        return self._scenario.name
 
     @property
     def nest(self) -> Nest:
@@ -429,7 +460,14 @@ class World:
             if not ant.depart():
                 return
 
+        previous_position = (ant.x, ant.y)
         ant.update()
+        if self._movement_intersects_obstacle(
+            previous_position,
+            (ant.x, ant.y),
+            radius=ant.hitbox_radius,
+        ):
+            ant.x, ant.y = previous_position
 
     def _process_upkeep(self) -> None:
         """Refuel ants physically at the nest in ascending ID order.
@@ -465,6 +503,12 @@ class World:
         self._next_ant_id += 1
         new_ant.x = nest.x
         new_ant.y = nest.y
+        self._require_spawn_position_available(
+            new_ant.x,
+            new_ant.y,
+            radius=new_ant.hitbox_radius,
+            label="spawned ant",
+        )
         self.add_entity(new_ant)
 
         if len(self.ants) >= settings.MAX_ANTS:
@@ -482,6 +526,25 @@ class World:
             settings.FOOD_RADIUS,
             settings.WORLD_HEIGHT - settings.FOOD_RADIUS,
         )
+        attempts = 0
+        while self._position_is_blocked(
+            x,
+            y,
+            radius=settings.FOOD_RADIUS,
+        ):
+            attempts += 1
+            if attempts > 500:
+                raise RuntimeError(
+                    "Unable to place food in unblocked space."
+                )
+            x = self._rng.uniform(
+                settings.FOOD_RADIUS,
+                settings.WORLD_WIDTH - settings.FOOD_RADIUS,
+            )
+            y = self._rng.uniform(
+                settings.FOOD_RADIUS,
+                settings.WORLD_HEIGHT - settings.FOOD_RADIUS,
+            )
 
         return Food(
             food_id=food_id,
@@ -495,17 +558,8 @@ class World:
         self,
         source_index: int,
     ) -> Food:
-        nest_x, nest_y = settings.NEST_POSITION
-        if source_index < len(
-            settings.INITIAL_FOOD_SOURCE_OFFSETS
-        ):
-            offset_x, offset_y = (
-                settings.INITIAL_FOOD_SOURCE_OFFSETS[
-                    source_index
-                ]
-            )
-            x = nest_x + offset_x
-            y = nest_y + offset_y
+        if source_index < len(self._scenario.initial_food_positions):
+            x, y = self._scenario.initial_food_positions[source_index]
             bounded_x = min(
                 max(x, settings.FOOD_RADIUS),
                 settings.WORLD_WIDTH
@@ -518,6 +572,12 @@ class World:
             )
             food_id = self._next_food_id
             self._next_food_id += 1
+            if self._position_is_blocked(
+                bounded_x,
+                bounded_y,
+                radius=settings.FOOD_RADIUS,
+            ):
+                return self._spawn_food()
             return Food(
                 food_id=food_id,
                 x=bounded_x,
@@ -526,6 +586,55 @@ class World:
                 quantity=10,
             )
         return self._spawn_food()
+
+    def _movement_intersects_obstacle(
+        self,
+        start: tuple[float, float],
+        end: tuple[float, float],
+        *,
+        radius: float = 0.0,
+    ) -> bool:
+        return any(
+            obstacle.intersects_segment(
+                start,
+                end,
+                padding=radius,
+            )
+            for obstacle in self._obstacles
+        )
+
+    def _position_is_blocked(
+        self,
+        x: float,
+        y: float,
+        *,
+        radius: float = 0.0,
+    ) -> bool:
+        return any(
+            obstacle.intersects_circle(
+                x,
+                y,
+                radius,
+            )
+            for obstacle in self._obstacles
+        )
+
+    def _require_spawn_position_available(
+        self,
+        x: float,
+        y: float,
+        *,
+        radius: float,
+        label: str,
+    ) -> None:
+        if self._position_is_blocked(
+            x,
+            y,
+            radius=radius,
+        ):
+            raise ValueError(
+                f"Cannot place {label} at blocked position ({x}, {y})."
+            )
 
     def _remove_depleted_pheromones(self) -> None:
         for pheromone in self.pheromones:

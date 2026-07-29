@@ -1,3 +1,4 @@
+import os
 import random as _random_module
 
 import pygame
@@ -44,7 +45,14 @@ def main() -> None:
 
         clock = pygame.time.Clock()
         camera = Camera()
-        world = World(rng=_random_module.Random(world_seed))
+        scenario_name = os.getenv(
+            "ANT_COLONY_SCENARIO",
+            "default_centered_colony",
+        )
+        world = World(
+            rng=_random_module.Random(world_seed),
+            scenario=scenario_name,
+        )
         renderer = Renderer(
             screen,
             camera,
@@ -64,7 +72,10 @@ def main() -> None:
                 elif world.is_complete:
                     action = completion_overlay.handle_event(event)
                     if action == "restart":
-                        world = World(rng=_random_module.Random(world_seed))
+                        world = World(
+                            rng=_random_module.Random(world_seed),
+                            scenario=scenario_name,
+                        )
                         world_restarted = True
                     elif action == "exit":
                         running = False

@@ -257,3 +257,17 @@ def test_renderer_hides_cursor_coordinates_outside_world_viewport(monkeypatch) -
     monkeypatch.setattr(pygame.mouse, "get_focused", lambda: False)
     renderer.draw(world)
     assert not any(label.startswith("cursor:") for label in labels)
+
+
+def test_renderer_obstacle_debug_bounds_stay_in_world_viewport() -> None:
+    screen = pygame.Surface((settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT))
+    renderer = renderer_module.Renderer(screen, Camera())
+    renderer.show_hitboxes = True
+    world = World(scenario="navigation_test_arena")
+
+    renderer.draw(world)
+
+    assert (
+        screen.get_at((settings.WORLD_WIDTH + 20, 20))[:3]
+        == settings.BACKGROUND_COLOR
+    )

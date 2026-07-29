@@ -194,7 +194,7 @@ def test_drink_from_sets_state_to_wandering() -> None:
     assert ant.state == AntState.WANDERING
 
 
-def test_drink_from_clears_on_excursion_flag() -> None:
+def test_drink_from_does_not_clear_on_excursion_flag() -> None:
     water = _water_at(200, 200)
     ant = _ant_at(200, 200)
     ant.energy.restore(ant.energy.maximum)
@@ -203,7 +203,7 @@ def test_drink_from_clears_on_excursion_flag() -> None:
 
     ant.drink_from(water)
 
-    assert not ant.on_excursion
+    assert ant.on_excursion
 
 
 def test_drink_from_returns_false_when_far() -> None:
@@ -278,6 +278,55 @@ def test_world_assigns_water_target_to_thirsty_wandering_ant() -> None:
 
     assert ant.water_target is not None
     assert ant.state == AntState.SEEKING_WATER
+
+
+def test_water_departure_from_nest_costs_exactly_one_excursion() -> None:
+    world = _seeded_world()
+    ant = world.ants[0]
+    ant.x = world.nest.x
+    ant.y = world.nest.y
+    ant.hydration.decay(
+        ant.hydration.maximum - settings.ANT_THIRST_THRESHOLD
+    )
+    initial_energy = ant.energy.current
+
+    world._assign_water_target(ant, ())
+    world._update_ant_movement(ant)
+
+    assert ant.on_excursion
+    assert ant.energy.current == (
+        initial_energy - settings.ANT_EXCURSION_ENERGY_COST
+    )
+
+    world._update_ant_movement(ant)
+    assert ant.energy.current == (
+        initial_energy - settings.ANT_EXCURSION_ENERGY_COST
+    )
+
+
+def test_ant_without_energy_cannot_leave_nest_for_water() -> None:
+    world = _seeded_world()
+    ant = world.ants[0]
+    ant.x = world.nest.x
+    ant.y = world.nest.y
+    ant.hydration.decay(
+        ant.hydration.maximum - settings.ANT_THIRST_THRESHOLD
+    )
+    ant.energy.spend(
+        settings.ANT_MAX_ENERGY - (settings.ANT_EXCURSION_ENERGY_COST - 1)
+    )
+    initial_x = ant.x
+    initial_y = ant.y
+    initial_energy = ant.energy.current
+
+    world._assign_water_target(ant, ())
+    world._update_ant_movement(ant)
+
+    assert ant.state == AntState.SEEKING_WATER
+    assert not ant.on_excursion
+    assert ant.energy.current == initial_energy
+    assert ant.x == initial_x
+    assert ant.y == initial_y
 
 
 def test_world_does_not_assign_water_to_hydrated_ant() -> None:
@@ -402,6 +451,49 @@ def test_world_processes_drinking_at_spring() -> None:
     assert result is True
     assert ant.hydration.current == pytest.approx(ant.hydration.maximum)
     assert ant.state == AntState.WANDERING
+
+
+def test_drinking_at_spring_does_not_end_excursion() -> None:
+    world = _seeded_world()
+    spring = world.water[0]
+    ant = world.ants[0]
+    ant.x = spring.x
+    ant.y = spring.y
+    ant.depart()
+    ant.hydration.decay(
+        ant.hydration.maximum - settings.ANT_THIRST_THRESHOLD
+    )
+    ant.select_water_target(spring)
+
+    world._drink_water_for(ant)
+
+    assert ant.on_excursion
+
+
+def test_post_drink_food_targeting_does_not_recharge_excursion_cost() -> None:
+    world = _seeded_world()
+    spring = world.water[0]
+    food = world.food[0]
+    ant = world.ants[0]
+    ant.depart()
+    excursion_energy = ant.energy.current
+    ant.x = spring.x
+    ant.y = spring.y
+    ant.hydration.decay(
+        ant.hydration.maximum - settings.ANT_THIRST_THRESHOLD
+    )
+    ant.select_water_target(spring)
+
+    assert world._drink_water_for(ant)
+
+    ant.x = settings.WORLD_WIDTH * 0.8
+    ant.y = settings.WORLD_HEIGHT * 0.8
+    food.x = ant.x
+    food.y = ant.y
+    world._assign_food_target(ant, (food,))
+
+    assert ant.state == AntState.SEEKING_FOOD
+    assert ant.energy.current == excursion_energy
 
 
 def test_world_drink_returns_false_when_no_water_target() -> None:
@@ -566,6 +658,39 @@ def test_ant_at_zero_hydration_stays_put_when_no_water() -> None:
     assert ant.hydration.current == 0.0
     assert ant.x == initial_x
     assert ant.y == initial_y
+
+
+def test_zero_hydration_seeking_water_away_from_spring_stays_put() -> None:
+    world = _seeded_world()
+    spring = world.water[0]
+    ant = world.ants[0]
+    ant.speed = 2.0
+    ant.x = spring.x - 200
+    ant.y = spring.y - 200
+    ant.select_water_target(spring)
+    ant.hydration.decay(ant.hydration.maximum)
+    initial_x = ant.x
+    initial_y = ant.y
+
+    ant.update()
+
+    assert ant.x == initial_x
+    assert ant.y == initial_y
+
+
+def test_zero_hydration_ant_at_spring_can_still_drink() -> None:
+    world = _seeded_world()
+    spring = world.water[0]
+    ant = world.ants[0]
+    ant.x = spring.x
+    ant.y = spring.y
+    ant.hydration.decay(ant.hydration.maximum)
+    ant.select_water_target(spring)
+
+    drank = world._drink_water_for(ant)
+
+    assert drank is True
+    assert ant.hydration.current == pytest.approx(ant.hydration.maximum)
 
 
 # ---------------------------------------------------------------------------

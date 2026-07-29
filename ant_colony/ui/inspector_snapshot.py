@@ -46,9 +46,14 @@ class InspectorSnapshot:
             return cls(
                 ant_count=len(world.ants),
                 food_source_count=len(world.food),
-                remaining_food_portions=sum(food.quantity for food in world.food),
+                remaining_food_portions=sum(
+                    food.quantity
+                    for food in world.food
+                ),
                 water_source_count=len(world.water),
-                building_material_source_count=(len(world.building_materials)),
+                building_material_source_count=(
+                    len(world.building_materials)
+                ),
                 nest_food_reserve=world.nest.food_reserve,
                 delivered_portions=world.nest.delivered_portions,
                 pheromone_count=len(world.pheromones),
@@ -68,9 +73,14 @@ class InspectorSnapshot:
         return cls(
             ant_count=len(world.ants),
             food_source_count=len(world.food),
-            remaining_food_portions=sum(food.quantity for food in world.food),
+            remaining_food_portions=sum(
+                food.quantity
+                for food in world.food
+            ),
             water_source_count=len(world.water),
-            building_material_source_count=(len(world.building_materials)),
+            building_material_source_count=(
+                len(world.building_materials)
+            ),
             nest_food_reserve=world.nest.food_reserve,
             delivered_portions=world.nest.delivered_portions,
             pheromone_count=len(world.pheromones),

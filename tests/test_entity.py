@@ -1,5 +1,6 @@
 import pytest
 
+from ant_colony.config import settings
 from ant_colony.entities.ant import Ant
 from ant_colony.entities.entity import Entity
 from ant_colony.entities.food import Food
@@ -42,7 +43,7 @@ def test_entity_exposes_hitbox_radius() -> None:
         nutrition=1,
     )
 
-    assert food.hitbox_radius == 10
+    assert food.hitbox_radius == settings.FOOD_RADIUS
 
 
 def test_intersection_allows_combined_hitbox_boundary() -> None:

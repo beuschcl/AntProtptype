@@ -165,7 +165,7 @@ def test_ants_own_independent_energy() -> None:
     ant_a = Ant(ant_id=10)
     ant_b = Ant(ant_id=11)
 
-    ant_a.energy.spend(50)
+    ant_a.energy.spend(settings.ANT_EXCURSION_ENERGY_COST)
 
     assert ant_a.energy.current < ant_b.energy.current
 
@@ -417,6 +417,8 @@ def test_refueling_occurs_before_spawning() -> None:
 def test_refueling_occurs_in_ascending_id_order() -> None:
     """When nutrition is scarce, the lowest-ID ant must be refuelled first."""
     world = _seeded_world()
+    if len(world.ants) < 2:
+        world.add_entity(Ant(ant_id=99))
 
     # Sort existing ants so we know which IDs are lowest
     ants_by_id = sorted(world.ants, key=lambda a: a.id)

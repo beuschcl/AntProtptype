@@ -29,6 +29,23 @@ def test_world_contains_initial_food() -> None:
     assert len(world.food) == settings.STARTING_FOOD_SOURCES
 
 
+def _world_with_food_sources(count: int) -> World:
+    world = World()
+
+    while len(world.food) < count:
+        food_index = len(world.food)
+        world.add_entity(
+            Food(
+                food_id=100 + food_index,
+                x=100 + food_index * 80,
+                y=100,
+                nutrition=settings.FOOD_NUTRITION,
+            )
+        )
+
+    return world
+
+
 def test_world_has_one_nest() -> None:
     world = World()
 
@@ -306,7 +323,7 @@ def test_world_assigns_food_from_personal_memory() -> None:
 
 
 def test_world_prefers_new_discovery_over_remembered_food() -> None:
-    world = World()
+    world = _world_with_food_sources(2)
     ant = world.ants[0]
     remembered_food = world.food[0]
     discovered_food = world.food[1]
@@ -370,7 +387,7 @@ def test_world_does_not_recruit_ant_outside_pheromone_range() -> None:
 
 
 def test_world_prefers_discovered_food_over_pheromone() -> None:
-    world = World()
+    world = _world_with_food_sources(2)
     ant = world.ants[0]
     discovered_food = world.food[0]
     pheromone_food = world.food[1]
@@ -395,7 +412,7 @@ def test_world_prefers_discovered_food_over_pheromone() -> None:
 
 
 def test_world_prefers_pheromone_over_remembered_food() -> None:
-    world = World()
+    world = _world_with_food_sources(2)
     ant = world.ants[0]
     remembered_food = world.food[0]
     pheromone_food = world.food[1]
@@ -418,7 +435,7 @@ def test_world_prefers_pheromone_over_remembered_food() -> None:
 
 
 def test_world_selects_strongest_pheromone_then_lowest_id() -> None:
-    world = World()
+    world = _world_with_food_sources(2)
     ant = world.ants[0]
     first_food = world.food[0]
     second_food = world.food[1]

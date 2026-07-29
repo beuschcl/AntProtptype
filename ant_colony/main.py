@@ -46,8 +46,8 @@ def main() -> None:
         clock = pygame.time.Clock()
         camera = Camera()
         scenario_name = os.getenv(
-            "ANT_COLONY_SCENARIO",
-            "default_centered_colony",
+            settings.DEFAULT_SCENARIO_ENV_VAR,
+            settings.DEFAULT_SCENARIO_NAME,
         )
         world = World(
             rng=_random_module.Random(world_seed),

@@ -16,14 +16,14 @@ def _seeded_world(seed: int = 42) -> World:
     return World(rng=random.Random(seed))
 
 
-def test_world_starts_with_two_ants() -> None:
+def test_world_starts_with_configured_ants() -> None:
     world = _seeded_world()
-    assert len(world.ants) == 2
+    assert len(world.ants) == settings.STARTING_ANTS
 
 
-def test_world_starts_with_three_food_sources() -> None:
+def test_world_starts_with_configured_food_sources() -> None:
     world = _seeded_world()
-    assert len(world.food) == 3
+    assert len(world.food) == settings.STARTING_FOOD_SOURCES
 
 
 def test_world_resources_are_food_only() -> None:

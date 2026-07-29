@@ -74,8 +74,9 @@ class Renderer:
 
                 pygame.draw.circle(
                     self.screen,
-                    (255, 255, 0),
+                    settings.SELECTION_COLOR,
                     (x, y),
-                    settings.ANT_RADIUS + 6,
-                    2,
+                    settings.ANT_RADIUS
+                    + settings.SELECTION_RING_PADDING,
+                    settings.SELECTION_RING_WIDTH,
                 )

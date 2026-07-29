@@ -1,5 +1,5 @@
-import random as _random_module
 import os
+import random as _random_module
 
 import pygame
 

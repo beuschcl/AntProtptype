@@ -1,5 +1,4 @@
 from ant_colony.components.energy import EnergyNeed
-from ant_colony.components.hydration import HydrationNeed
 from ant_colony.components.inventory import Inventory
 from ant_colony.components.resources import (
     ResourcePortion,
@@ -12,7 +11,6 @@ __all__ = [
     "AntState",
     "EnergyNeed",
     "FoodTargetSource",
-    "HydrationNeed",
     "Inventory",
     "ResourcePortion",
     "ResourceType",

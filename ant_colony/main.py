@@ -7,7 +7,10 @@ from ant_colony.graphics.camera import Camera
 from ant_colony.ui.completion_overlay import CompletionOverlay
 from ant_colony.ui.inspector import Inspector
 from ant_colony.ui.renderer import Renderer
-from ant_colony.ui.window_layout import WindowController
+from ant_colony.ui.window_layout import (
+    WindowController,
+    WindowLayout,
+)
 from ant_colony.world import World
 
 
@@ -15,6 +18,16 @@ def _maybe_update_world(world: World, restarted: bool) -> None:
     """Advance the world by one tick if it is neither complete nor freshly restarted."""
     if not world.is_complete and not restarted:
         world.update()
+
+
+def _fit_camera_to_layout(
+    camera: Camera,
+    layout: WindowLayout,
+) -> None:
+    camera.fit(
+        layout.world_viewport,
+        (settings.WORLD_WIDTH, settings.WORLD_HEIGHT),
+    )
 
 
 def main() -> None:
@@ -43,6 +56,7 @@ def main() -> None:
 
         while running:
             layout = window.layout(screen)
+            _fit_camera_to_layout(camera, layout)
             world_restarted = False
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -58,6 +72,8 @@ def main() -> None:
                     if event.key == pygame.K_F11:
                         screen = window.toggle_fullscreen()
                         renderer.set_screen(screen)
+                        layout = window.layout(screen)
+                        _fit_camera_to_layout(camera, layout)
                     renderer.handle_event(event)
                 elif event.type == pygame.VIDEORESIZE and not window.fullscreen:
                     window.windowed_size = (
@@ -69,7 +85,11 @@ def main() -> None:
                         pygame.RESIZABLE,
                     )
                     renderer.set_screen(screen)
+                    layout = window.layout(screen)
+                    _fit_camera_to_layout(camera, layout)
                 elif window.handle_divider_event(event, layout):
+                    layout = window.layout(screen)
+                    _fit_camera_to_layout(camera, layout)
                     continue
                 elif (
                     event.type == pygame.MOUSEBUTTONDOWN

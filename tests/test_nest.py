@@ -1,3 +1,5 @@
+from typing import cast
+
 import pytest
 
 from ant_colony.components import (
@@ -97,7 +99,7 @@ def test_nest_rejects_non_food_portions() -> None:
             (
                 ResourcePortion(
                     source_id=1,
-                    resource_type=ResourceType.WATER,
+                    resource_type=cast(ResourceType, "not-food"),
                     value=5,
                 ),
             )

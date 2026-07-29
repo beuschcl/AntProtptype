@@ -3,7 +3,7 @@ class EnergyNeed:
 
     ``spend`` returns ``False`` without modifying state when the current
     level is insufficient; all other arithmetic is validated against
-    negative inputs in the same way as ``HydrationNeed``.
+    negative inputs.
     """
 
     def __init__(self, maximum: int) -> None:

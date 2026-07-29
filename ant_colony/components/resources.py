@@ -4,8 +4,6 @@ from enum import Enum
 
 class ResourceType(Enum):
     FOOD = "food"
-    WATER = "water"
-    BUILDING_MATERIAL = "building_material"
 
 
 @dataclass(frozen=True, slots=True)

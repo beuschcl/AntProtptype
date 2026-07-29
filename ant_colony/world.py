@@ -9,15 +9,11 @@ from ant_colony.components import (
 )
 from ant_colony.config import settings
 from ant_colony.entities.ant import Ant
-from ant_colony.entities.building_material import (
-    BuildingMaterial,
-)
 from ant_colony.entities.entity import Entity
 from ant_colony.entities.food import Food
 from ant_colony.entities.nest import Nest
 from ant_colony.entities.pheromone import Pheromone
 from ant_colony.entities.resource import Resource
-from ant_colony.entities.water import Water
 from ant_colony.knowledge import EntityObservation
 
 EntityType = TypeVar(
@@ -56,28 +52,12 @@ class World:
             ant.y = nest.y
             self.add_entity(ant)
 
-        for _ in range(settings.STARTING_FOOD_SOURCES):
-            self.add_entity(self._spawn_food())
-
-        self.add_entity(
-            Water(
-                water_id=1,
-                x=settings.WATER_POSITION[0],
-                y=settings.WATER_POSITION[1],
-                hydration=4,
-                quantity=15,
+        for source_index in range(
+            settings.STARTING_FOOD_SOURCES
+        ):
+            self.add_entity(
+                self._spawn_initial_food(source_index)
             )
-        )
-
-        self.add_entity(
-            BuildingMaterial(
-                material_id=1,
-                x=700,
-                y=520,
-                construction_value=3,
-                quantity=12,
-            )
-        )
 
     @property
     def entities(self) -> tuple[Entity, ...]:
@@ -92,19 +72,9 @@ class World:
         return self.entities_of_type(Food)
 
     @property
-    def water(self) -> tuple[Water, ...]:
-        return self.entities_of_type(Water)
-
-    @property
-    def building_materials(
-        self,
-    ) -> tuple[BuildingMaterial, ...]:
-        return self.entities_of_type(BuildingMaterial)
-
-    @property
     def resources(self) -> tuple[Resource, ...]:
         return self.entities_of_type(Resource)
-    
+
     @property
     def pheromones(self) -> tuple[Pheromone, ...]:
         return self.entities_of_type(Pheromone)
@@ -447,7 +417,7 @@ class World:
 
         A wandering ant that is physically at the nest must pay the one-time
         excursion cost before it can leave.  If it cannot afford to depart,
-        only hydration decay runs and movement is suppressed this tick.
+        movement is suppressed this tick.
         """
         nest = self.nest
         at_nest = ant.intersects_entity(
@@ -457,8 +427,6 @@ class World:
 
         if at_nest and not ant.on_excursion and ant.state == AntState.WANDERING:
             if not ant.depart():
-                # Insufficient energy — decay hydration only, no movement.
-                ant.hydration.decay(settings.ANT_HYDRATION_DECAY_PER_UPDATE)
                 return
 
         ant.update()
@@ -522,6 +490,42 @@ class World:
             nutrition=5,
             quantity=10,
         )
+
+    def _spawn_initial_food(
+        self,
+        source_index: int,
+    ) -> Food:
+        nest_x, nest_y = settings.NEST_POSITION
+        if source_index < len(
+            settings.INITIAL_FOOD_SOURCE_OFFSETS
+        ):
+            offset_x, offset_y = (
+                settings.INITIAL_FOOD_SOURCE_OFFSETS[
+                    source_index
+                ]
+            )
+            x = nest_x + offset_x
+            y = nest_y + offset_y
+            bounded_x = min(
+                max(x, settings.FOOD_RADIUS),
+                settings.WORLD_WIDTH
+                - settings.FOOD_RADIUS,
+            )
+            bounded_y = min(
+                max(y, settings.FOOD_RADIUS),
+                settings.WORLD_HEIGHT
+                - settings.FOOD_RADIUS,
+            )
+            food_id = self._next_food_id
+            self._next_food_id += 1
+            return Food(
+                food_id=food_id,
+                x=bounded_x,
+                y=bounded_y,
+                nutrition=5,
+                quantity=10,
+            )
+        return self._spawn_food()
 
     def _remove_depleted_pheromones(self) -> None:
         for pheromone in self.pheromones:
@@ -640,9 +644,6 @@ class World:
             f"entities={len(self._entities)}, "
             f"ants={len(self.ants)}, "
             f"food={len(self.food)}, "
-            f"water={len(self.water)}, "
-            f"building_materials="
-            f"{len(self.building_materials)}, "
             f"pheromones={len(self.pheromones)}"
             f")"
         )

@@ -1,8 +1,6 @@
 import random
 
 from ant_colony.config import settings
-from ant_colony.entities.building_material import BuildingMaterial
-from ant_colony.entities.water import Water
 from ant_colony.world import World
 
 
@@ -31,14 +29,14 @@ def test_initial_food_positions_are_deterministic_with_seeded_rng() -> None:
     assert positions_a == positions_b
 
 
-def test_different_seeds_produce_different_layouts() -> None:
+def test_initial_food_layout_is_seed_independent() -> None:
     world_a = _seeded_world(seed=1)
     world_b = _seeded_world(seed=2)
 
     positions_a = [(f.x, f.y) for f in world_a.food]
     positions_b = [(f.x, f.y) for f in world_b.food]
 
-    assert positions_a != positions_b
+    assert positions_a == positions_b
 
 
 def test_every_food_source_is_inside_world_bounds() -> None:
@@ -121,49 +119,6 @@ def test_replacement_food_has_a_new_unique_id() -> None:
     assert len(replacement_ids) == 1
     new_id = next(iter(replacement_ids))
     assert new_id not in original_ids
-
-
-# ---------------------------------------------------------------------------
-# Other resource types must NOT trigger food spawning
-# ---------------------------------------------------------------------------
-
-
-def test_depleting_water_does_not_spawn_food() -> None:
-    world = _seeded_world()
-    initial_food_count = len(world.food)
-
-    water = Water(
-        water_id=999,
-        x=100,
-        y=100,
-        hydration=3,
-        quantity=1,
-    )
-    world.add_entity(water)
-    water.collect()
-    world.update()
-
-    assert water not in world.entities
-    assert len(world.food) == initial_food_count
-
-
-def test_depleting_building_material_does_not_spawn_food() -> None:
-    world = _seeded_world()
-    initial_food_count = len(world.food)
-
-    material = BuildingMaterial(
-        material_id=999,
-        x=100,
-        y=100,
-        construction_value=2,
-        quantity=1,
-    )
-    world.add_entity(material)
-    material.collect()
-    world.update()
-
-    assert material not in world.entities
-    assert len(world.food) == initial_food_count
 
 
 # ---------------------------------------------------------------------------

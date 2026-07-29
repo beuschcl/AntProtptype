@@ -701,9 +701,7 @@ class World:
     ) -> bool:
         return (
             0 <= x <= settings.WORLD_WIDTH
-            and 0
-            <= y
-            <= settings.WORLD_HEIGHT
+            and 0 <= y <= settings.WORLD_HEIGHT
         )
 
     def __repr__(self) -> str:

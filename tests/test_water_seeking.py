@@ -470,7 +470,7 @@ def test_drinking_at_spring_does_not_end_excursion() -> None:
     assert ant.on_excursion
 
 
-def test_post_drink_food_targeting_does_not_recharge_excursion_cost() -> None:
+def test_post_drink_food_targeting_does_not_charge_second_excursion_cost() -> None:
     world = _seeded_world()
     spring = world.water[0]
     food = world.food[0]

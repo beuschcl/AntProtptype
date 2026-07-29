@@ -125,14 +125,12 @@ class Ant(Entity):
 
     def update(self) -> None:
         self.hydration.decay(settings.ANT_HYDRATION_DECAY_PER_UPDATE)
-        if self.hydration.current == 0 and (
-            self._water_target is None
-            or not self.can_drink(self._water_target)
-        ):
+        if self.hydration.current <= 0 and not self.can_drink_immediately():
             return
 
         if self.state == AntState.WANDERING:
-            self.wander()
+            if self.hydration.current > 0:
+                self.wander()
         elif self.state == AntState.SEEKING_FOOD:
             self.move_toward_food()
         elif self.state == AntState.CARRYING_FOOD:
@@ -165,7 +163,6 @@ class Ant(Entity):
 
         if food.is_depleted:
             return False
-
 
         self._nest_target = None
         self._food_target = food
@@ -227,6 +224,12 @@ class Ant(Entity):
                 water,
                 padding=settings.ANT_INTERACTION_RADIUS,
             )
+        )
+
+    def can_drink_immediately(self) -> bool:
+        return (
+            self._water_target is not None
+            and self.can_drink(self._water_target)
         )
 
     def drink_from(

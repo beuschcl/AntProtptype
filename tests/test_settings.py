@@ -18,3 +18,4 @@ def test_requested_visual_palette_constants() -> None:
 
 def test_debug_grid_spacing_is_100() -> None:
     assert settings.DEBUG_GRID_SPACING == 100
+    assert settings.DEBUG_GRID_LABEL_STEP == settings.DEBUG_GRID_SPACING

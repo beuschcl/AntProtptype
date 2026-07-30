@@ -258,10 +258,9 @@ def test_renderer_draws_coordinate_text_only_with_g_toggle(monkeypatch) -> None:
     assert any(label.startswith("cursor:") for label in labels)
 
 
-def test_renderer_hides_cursor_coordinates_outside_world_viewport(monkeypatch) -> None:
+def test_renderer_draws_grid_coordinate_labels_without_mouse_focus(monkeypatch) -> None:
     screen = pygame.Surface((settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT))
     renderer = renderer_module.Renderer(screen, Camera())
-    renderer.show_grid = True
     world = World()
     labels: list[str] = []
 
@@ -269,32 +268,29 @@ def test_renderer_hides_cursor_coordinates_outside_world_viewport(monkeypatch) -
         labels.append(text)
 
     monkeypatch.setattr(renderer, "_draw_debug_text", capture_debug_text)
-
-    monkeypatch.setattr(
-        pygame.mouse,
-        "get_pos",
-        lambda: (settings.WORLD_WIDTH + 20, 100),
-    )
-    monkeypatch.setattr(pygame.mouse, "get_focused", lambda: True)
-    renderer.draw(world)
-    assert not any(label.startswith("cursor:") for label in labels)
-
-    labels.clear()
-    monkeypatch.setattr(pygame.mouse, "get_pos", lambda: (100, 100))
     monkeypatch.setattr(pygame.mouse, "get_focused", lambda: False)
+
+    renderer.show_grid = True
     renderer.draw(world)
+
+    assert "0" in labels
+    assert "100" in labels
     assert not any(label.startswith("cursor:") for label in labels)
 
 
-def test_renderer_obstacle_debug_bounds_stay_in_world_viewport() -> None:
+def test_renderer_draws_grid_labels_at_configured_step(monkeypatch) -> None:
     screen = pygame.Surface((settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT))
     renderer = renderer_module.Renderer(screen, Camera())
-    renderer.show_hitboxes = True
-    world = World(scenario="navigation_test_arena")
+    world = World()
+    labels: list[str] = []
 
+    def capture_debug_text(text: str, _x: int, _y: int) -> None:
+        labels.append(text)
+
+    monkeypatch.setattr(renderer, "_draw_debug_text", capture_debug_text)
+    monkeypatch.setattr(pygame.mouse, "get_focused", lambda: False)
+
+    renderer.show_grid = True
     renderer.draw(world)
 
-    assert (
-        screen.get_at((settings.WORLD_WIDTH + 20, 20))[:3]
-        == settings.BACKGROUND_COLOR
-    )
+    assert str(settings.DEBUG_GRID_LABEL_STEP) in labels

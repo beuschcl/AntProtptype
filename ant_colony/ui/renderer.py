@@ -86,15 +86,16 @@ class Renderer:
         if world.selected_ant is not None:
             self._draw_selection_ring(world.selected_ant)
 
-        if (
-            self.show_grid
-            and cursor_screen is not None
-            and cursor_world is not None
-            and self._should_show_cursor_coordinates(cursor_screen)
-        ):
-            self._draw_coordinate_overlay(
-                cursor_world,
-            )
+        if self.show_grid:
+            self._draw_grid_coordinate_labels()
+            if (
+                cursor_screen is not None
+                and cursor_world is not None
+                and self._should_show_cursor_coordinates(cursor_screen)
+            ):
+                self._draw_cursor_coordinate_label(
+                    cursor_world,
+                )
 
         self.screen.set_clip(None)
         self._draw_inspector_divider(layout)
@@ -311,7 +312,7 @@ class Renderer:
             return settings.DEBUG_PHEROMONE_DISCOVERY_RADIUS_COLOR
         return settings.DEBUG_DISCOVERY_RADIUS_COLOR
 
-    def _draw_coordinate_overlay(
+    def _draw_cursor_coordinate_label(
         self,
         cursor_world: tuple[float, float],
     ) -> None:
@@ -326,10 +327,11 @@ class Renderer:
             - settings.DEBUG_CURSOR_LABEL_BOTTOM_OFFSET,
         )
 
+    def _draw_grid_coordinate_labels(self) -> None:
         for x in range(
-            settings.DEBUG_GRID_SPACING,
+            0,
             settings.WORLD_WIDTH,
-            settings.DEBUG_GRID_SPACING * 2,
+            settings.DEBUG_GRID_LABEL_STEP,
         ):
             screen_x, screen_y = self.camera.world_to_screen(
                 x,
@@ -342,9 +344,9 @@ class Renderer:
             )
 
         for y in range(
-            settings.DEBUG_GRID_SPACING,
+            settings.DEBUG_GRID_LABEL_STEP,
             settings.WORLD_HEIGHT,
-            settings.DEBUG_GRID_SPACING * 2,
+            settings.DEBUG_GRID_LABEL_STEP,
         ):
             screen_x, screen_y = self.camera.world_to_screen(
                 0,
@@ -356,60 +358,46 @@ class Renderer:
                 screen_y + settings.DEBUG_COORDINATE_LABEL_OFFSET,
             )
 
+    def _should_show_cursor_coordinates(
+        self,
+        cursor_screen: tuple[int, int],
+    ) -> bool:
+        if not pygame.mouse.get_focused():
+            return False
+
+        return self._world_clip_rect.collidepoint(cursor_screen)
+
+    @staticmethod
+    def _cursor_screen_position() -> tuple[int, int] | None:
+        if not pygame.mouse.get_focused():
+            return None
+
+        return pygame.mouse.get_pos()
+
     def _draw_debug_text(
         self,
         text: str,
         x: int,
         y: int,
     ) -> None:
-        label = self.debug_font.render(
+        surface = self.debug_font.render(
             text,
             True,
             settings.DEBUG_TEXT_COLOR,
         )
-        self.screen.blit(label, (x, y))
+        self.screen.blit(surface, (x, y))
 
-    @staticmethod
-    def _cursor_screen_position() -> tuple[int, int] | None:
-        try:
-            return pygame.mouse.get_pos()
-        except pygame.error:
-            # Raised in headless/uninitialized video contexts.
-            return None
-
-    def _should_show_cursor_coordinates(
-        self,
-        cursor_screen: tuple[int, int],
-    ) -> bool:
-        return (
-            self._mouse_is_focused()
-            and self._world_clip_rect.collidepoint(cursor_screen)
-        )
-
-    @staticmethod
-    def _mouse_is_focused() -> bool:
-        try:
-            return bool(pygame.mouse.get_focused())
-        except pygame.error:
-            return False
-
-    def _draw_inspector_divider(
-        self,
-        layout: WindowLayout,
-    ) -> None:
-        pygame.draw.rect(
-            self.screen,
-            settings.INSPECTOR_DIVIDER_COLOR,
-            layout.divider_rect,
-        )
-
-    def _draw_world_bounds(
-        self,
-        layout: WindowLayout,
-    ) -> None:
+    def _draw_world_bounds(self, layout: WindowLayout) -> None:
         pygame.draw.rect(
             self.screen,
             settings.SCOPE_BOUNDARY_COLOR,
             layout.world_viewport,
-            width=settings.WORLD_BOUNDS_WIDTH,
+            settings.WORLD_BOUNDS_WIDTH,
+        )
+
+    def _draw_inspector_divider(self, layout: WindowLayout) -> None:
+        pygame.draw.rect(
+            self.screen,
+            settings.INSPECTOR_DIVIDER_COLOR,
+            layout.divider_rect,
         )

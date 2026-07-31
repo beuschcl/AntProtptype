@@ -362,17 +362,24 @@ class Renderer:
         self,
         cursor_screen: tuple[int, int],
     ) -> bool:
-        if not pygame.mouse.get_focused():
+        try:
+            mouse_is_focused = pygame.mouse.get_focused()
+        except pygame.error:
+            return False
+
+        if not mouse_is_focused:
             return False
 
         return self._world_clip_rect.collidepoint(cursor_screen)
 
     @staticmethod
     def _cursor_screen_position() -> tuple[int, int] | None:
-        if not pygame.mouse.get_focused():
+        try:
+            if not pygame.mouse.get_focused():
+                return None
+            return pygame.mouse.get_pos()
+        except pygame.error:
             return None
-
-        return pygame.mouse.get_pos()
 
     def _draw_debug_text(
         self,

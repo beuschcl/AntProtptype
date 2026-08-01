@@ -503,7 +503,8 @@ class World:
             ant.y,
             radius=ant.hitbox_radius,
         ):
-            self._move_ant_out_of_obstacle_contact(ant)
+            if self._move_ant_out_of_obstacle_contact(ant):
+                self._start_wall_following(ant)
             return
 
         if self._is_wall_following(ant):
@@ -574,7 +575,9 @@ class World:
             ant.heading = heading % 360
             return
 
-        if not self._move_ant_out_of_obstacle_contact(ant):
+        if self._move_ant_out_of_obstacle_contact(ant):
+            self._start_wall_following(ant)
+        else:
             ant.heading = (base_heading + 180) % 360
 
     def _is_wall_following(
@@ -694,6 +697,7 @@ class World:
             clear_candidates.append(
                 (
                     (
+                        self._boundary_contact_penalty(ant, candidate),
                         self._avoid_pheromone_penalty(ant, candidate),
                         self._blocked_heading_penalty(ant, heading),
                         self._heading_delta(
@@ -714,7 +718,9 @@ class World:
             return
 
         self._wall_follow_sides[ant.id] = -side
-        if not self._move_ant_out_of_obstacle_contact(ant):
+        if self._move_ant_out_of_obstacle_contact(ant):
+            self._start_wall_following(ant)
+        else:
             ant.heading = (base_heading + 180) % 360
 
     def _move_ant_out_of_obstacle_contact(
@@ -775,6 +781,7 @@ class World:
     ) -> tuple[float, ...]:
         blocked_penalty = self._blocked_heading_penalty(ant, heading)
         avoid_penalty = self._avoid_pheromone_penalty(ant, candidate)
+        boundary_penalty = self._boundary_contact_penalty(ant, candidate)
         recovery_penalty = 0
         if blocked_count >= settings.ANT_AVOID_PHEROMONE_REPEAT_COUNT:
             recovery_heading = (base_heading + 180) % 360
@@ -786,6 +793,7 @@ class World:
         )
         if pheromone_distance is not None:
             return (
+                boundary_penalty,
                 blocked_penalty,
                 avoid_penalty,
                 recovery_penalty,
@@ -799,6 +807,7 @@ class World:
             candidate,
         )
         return (
+            boundary_penalty,
             blocked_penalty,
             avoid_penalty,
             recovery_penalty,
@@ -806,6 +815,35 @@ class World:
             target_distance,
             self._heading_delta(heading, base_heading),
         )
+
+    @staticmethod
+    def _world_boundary_clearance(
+        x: float,
+        y: float,
+    ) -> float:
+        padding = settings.ANT_BOUNDARY_PADDING
+        return min(
+            x - padding,
+            settings.WORLD_WIDTH - padding - x,
+            y - padding,
+            settings.WORLD_HEIGHT - padding - y,
+        )
+
+    def _boundary_contact_penalty(
+        self,
+        ant: Ant,
+        candidate: tuple[float, float],
+    ) -> int:
+        current_clearance = self._world_boundary_clearance(ant.x, ant.y)
+        if current_clearance > ant.speed:
+            return 0
+
+        candidate_clearance = self._world_boundary_clearance(
+            candidate[0],
+            candidate[1],
+        )
+        minimum_escape_clearance = current_clearance + 1
+        return int(candidate_clearance < minimum_escape_clearance)
 
     def _route_pheromone_distance(
         self,

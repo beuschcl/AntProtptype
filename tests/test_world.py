@@ -874,7 +874,7 @@ def test_world_removes_depleted_pheromone() -> None:
     assert pheromone not in world.pheromones
 
 
-def test_world_removes_pheromones_when_source_food_is_removed() -> None:
+def test_world_keeps_pheromones_when_source_food_is_removed() -> None:
     world = World()
     food = world.food[0]
     pheromone = Pheromone(
@@ -887,8 +887,30 @@ def test_world_removes_pheromones_when_source_food_is_removed() -> None:
 
     world.remove_entity(food)
 
-    assert pheromone not in world.entities
-    assert pheromone not in world.pheromones
+    assert pheromone in world.entities
+    assert pheromone in world.pheromones
+
+
+def test_world_keeps_pheromones_when_source_food_is_depleted() -> None:
+    world = World()
+    food = world.food[0]
+    pheromone = Pheromone(
+        pheromone_id=1,
+        source_food_id=food.id,
+        x=100,
+        y=100,
+    )
+    world.add_entity(pheromone)
+
+    while not food.is_depleted:
+        food.collect()
+
+    world._remove_depleted_resources()
+
+    assert food not in world.food
+    assert pheromone in world.entities
+    assert pheromone in world.pheromones
+    assert pheromone.source_food_id == food.id
 
 def test_world_exposes_food_resources() -> None:
     world = World()

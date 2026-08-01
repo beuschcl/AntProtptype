@@ -211,6 +211,26 @@ def test_ant_collects_food_in_range() -> None:
     assert ant.state == AntState.CARRYING_FOOD
 
 
+def test_ant_collects_pickup_amount_in_one_visit() -> None:
+    ant = Ant(ant_id=1)
+    food = make_food(
+        x=100,
+        y=100,
+        quantity=settings.ANT_FOOD_PICKUP_AMOUNT + 1,
+    )
+    ant.x = 100
+    ant.y = 100
+    ant.select_food_target(food)
+
+    collected = ant.collect_from(food)
+
+    assert collected
+    assert ant.inventory.count() == settings.ANT_FOOD_PICKUP_AMOUNT
+    assert food.quantity == 1
+    assert ant.food_target is None
+    assert ant.state == AntState.CARRYING_FOOD
+
+
 def test_ant_cannot_collect_distant_food() -> None:
     ant = Ant(ant_id=1)
     food = make_food(

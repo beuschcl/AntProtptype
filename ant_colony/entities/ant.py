@@ -198,16 +198,26 @@ class Ant(Entity):
         if not self.can_collect(food):
             return False
 
-        portion = food.collect()
+        collected = False
+        for _ in range(settings.ANT_FOOD_PICKUP_AMOUNT):
+            if not self.can_collect(food):
+                break
 
-        if portion is None:
+            portion = food.collect()
+
+            if portion is None:
+                break
+
+            if not self.inventory.add(portion):
+                raise RuntimeError(
+                    "Food was collected but could not be "
+                    "stored in the ant inventory."
+                )
+
+            collected = True
+
+        if not collected:
             return False
-
-        if not self.inventory.add(portion):
-            raise RuntimeError(
-                "Food was collected but could not be "
-                "stored in the ant inventory."
-            )
 
         self.clear_food_target()
         return True

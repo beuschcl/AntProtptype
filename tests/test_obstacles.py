@@ -219,6 +219,105 @@ def test_returning_ant_escapes_obstacle_ceiling_corner_contact() -> None:
     assert ant.nest_target is world.nest
 
 
+def _world_boundary_obstacle_contact_points() -> tuple[tuple[float, float], ...]:
+    world = World(scenario="navigation_test_arena")
+    points: list[tuple[float, float]] = []
+    padding = settings.ANT_BOUNDARY_PADDING
+
+    for obstacle in world.obstacles:
+        contact_x_values = (
+            obstacle.x - padding,
+            obstacle.x + obstacle.width / 2,
+            obstacle.x + obstacle.width + padding,
+        )
+        if obstacle.y <= 0:
+            points.extend((x, padding) for x in contact_x_values)
+        if obstacle.y + obstacle.height >= settings.WORLD_HEIGHT:
+            points.extend(
+                (x, settings.WORLD_HEIGHT - padding)
+                for x in contact_x_values
+            )
+
+    return tuple(points)
+
+
+@pytest.mark.parametrize("point", _world_boundary_obstacle_contact_points())
+@pytest.mark.parametrize("wall_follow_side", (-1, 1))
+def test_seeking_ant_recovers_from_world_boundary_obstacle_contact(
+    point: tuple[float, float],
+    wall_follow_side: int,
+) -> None:
+    world = World(scenario="navigation_test_arena")
+    ant = world.ants[0]
+    food = world.food[0]
+    ant.x, ant.y = point
+    ant.speed = 5
+    food.x = 780
+    food.y = 350
+    ant.select_food_target(food)
+    world._wall_follow_sides[ant.id] = wall_follow_side
+
+    for _ in range(300):
+        world._update_ant_movement(ant)
+        if ant.intersects_entity(
+            food,
+            padding=settings.ANT_INTERACTION_RADIUS,
+        ):
+            break
+
+    assert ant.intersects_entity(
+        food,
+        padding=settings.ANT_INTERACTION_RADIUS,
+    )
+    assert not world._position_is_blocked(
+        ant.x,
+        ant.y,
+        radius=ant.hitbox_radius,
+    )
+    assert ant.food_target is food
+
+
+@pytest.mark.parametrize("point", _world_boundary_obstacle_contact_points())
+@pytest.mark.parametrize("wall_follow_side", (-1, 1))
+def test_returning_ant_recovers_from_world_boundary_obstacle_contact(
+    point: tuple[float, float],
+    wall_follow_side: int,
+) -> None:
+    world = World(scenario="navigation_test_arena")
+    ant = world.ants[0]
+    food = world.food[0]
+    ant.x, ant.y = point
+    ant.speed = 5
+    ant.inventory.add(
+        ResourcePortion(
+            source_id=food.id,
+            resource_type=ResourceType.FOOD,
+            value=1,
+        )
+    )
+    ant.select_nest_target(world.nest)
+    world._wall_follow_sides[ant.id] = wall_follow_side
+
+    for _ in range(300):
+        world._update_ant_movement(ant)
+        if ant.intersects_entity(
+            world.nest,
+            padding=settings.ANT_INTERACTION_RADIUS,
+        ):
+            break
+
+    assert ant.intersects_entity(
+        world.nest,
+        padding=settings.ANT_INTERACTION_RADIUS,
+    )
+    assert not world._position_is_blocked(
+        ant.x,
+        ant.y,
+        radius=ant.hitbox_radius,
+    )
+    assert ant.nest_target is world.nest
+
+
 def test_first_return_trip_reaches_nest_without_pheromone_help() -> None:
     world = World(scenario="navigation_test_arena")
     ant = world.ants[0]

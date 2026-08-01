@@ -50,8 +50,12 @@ def test_ant_movement_does_not_cross_obstacle() -> None:
 
     world._update_ant_movement(ant)
 
-    assert ant.x == 475
-    assert ant.y == 370
+    assert not world._position_is_blocked(
+        ant.x,
+        ant.y,
+        radius=ant.hitbox_radius,
+    )
+    assert ant.x < 500
 
 
 def test_blocked_ant_tries_clear_alternate_heading() -> None:

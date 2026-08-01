@@ -2,7 +2,9 @@ import random
 
 import pytest
 
+from ant_colony.components import FoodTargetSource
 from ant_colony.config import settings
+from ant_colony.entities.pheromone import Pheromone
 from ant_colony.geometry import RectangleObstacle
 from ant_colony.scenarios import (
     NAVIGATION_TEST_ARENA,
@@ -67,6 +69,38 @@ def test_blocked_ant_tries_clear_alternate_heading() -> None:
 
     assert ant.x > 460
     assert ant.y != 370
+    assert not world._position_is_blocked(
+        ant.x,
+        ant.y,
+        radius=ant.hitbox_radius,
+    )
+    assert ant.food_target is food
+
+
+def test_blocked_pheromone_recruited_ant_biases_toward_matching_trail() -> None:
+    world = World(scenario="navigation_test_arena")
+    ant = world.ants[0]
+    food = world.food[0]
+    ant.x = 460
+    ant.y = 370
+    ant.speed = 10
+    food.x = 780
+    food.y = 370
+    pheromone = Pheromone(
+        pheromone_id=99,
+        source_food_id=food.id,
+        x=460,
+        y=320,
+    )
+    world.add_entity(pheromone)
+    ant.select_food_target(
+        food,
+        source=FoodTargetSource.PHEROMONE,
+    )
+
+    world._update_ant_movement(ant)
+
+    assert ant.y < 370
     assert not world._position_is_blocked(
         ant.x,
         ant.y,

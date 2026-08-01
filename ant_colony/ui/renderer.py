@@ -6,6 +6,7 @@ from ant_colony.entities.entity import Entity
 from ant_colony.entities.food import Food
 from ant_colony.entities.nest import Nest
 from ant_colony.entities.pheromone import Pheromone
+from ant_colony.geometry import RectangleObstacle
 from ant_colony.graphics.camera import Camera
 from ant_colony.graphics.primitives import (
     Circle,
@@ -235,26 +236,48 @@ class Renderer:
 
     def _draw_obstacle_bounds(self, world: World) -> None:
         for obstacle in world.obstacles:
-            left, top = self.camera.world_to_screen(
-                obstacle.left,
-                obstacle.top,
-            )
-            right, bottom = self.camera.world_to_screen(
-                obstacle.right,
-                obstacle.bottom,
-            )
-            rect = pygame.Rect(
-                min(left, right),
-                min(top, bottom),
-                abs(right - left),
-                abs(bottom - top),
-            )
-            pygame.draw.rect(
-                self.screen,
+            self._draw_obstacle_rect(
+                obstacle,
                 settings.DEBUG_OBSTACLE_COLOR,
-                rect,
                 settings.DEBUG_OBSTACLE_WIDTH,
             )
+
+        if world.route_blockers_active:
+            return
+
+        for blocker in world.route_blockers:
+            self._draw_obstacle_rect(
+                blocker,
+                settings.DEBUG_ROUTE_BLOCKER_PREVIEW_COLOR,
+                settings.DEBUG_ROUTE_BLOCKER_PREVIEW_WIDTH,
+            )
+
+    def _draw_obstacle_rect(
+        self,
+        obstacle: RectangleObstacle,
+        color: tuple[int, int, int],
+        width: int,
+    ) -> None:
+        left, top = self.camera.world_to_screen(
+            obstacle.left,
+            obstacle.top,
+        )
+        right, bottom = self.camera.world_to_screen(
+            obstacle.right,
+            obstacle.bottom,
+        )
+        rect = pygame.Rect(
+            min(left, right),
+            min(top, bottom),
+            abs(right - left),
+            abs(bottom - top),
+        )
+        pygame.draw.rect(
+            self.screen,
+            color,
+            rect,
+            width,
+        )
 
     def _draw_radius_overlays(self, world: World) -> None:
         for entity in world.entities:

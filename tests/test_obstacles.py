@@ -152,6 +152,73 @@ def test_returning_ant_escapes_obstacle_corner_contact() -> None:
     assert ant.nest_target is world.nest
 
 
+def test_seeking_ant_escapes_obstacle_ceiling_corner_contact() -> None:
+    world = World(scenario="navigation_test_arena")
+    ant = world.ants[0]
+    food = world.food[0]
+    ant.x = 518
+    ant.y = settings.ANT_BOUNDARY_PADDING
+    ant.speed = 5
+    food.x = 780
+    food.y = 350
+    ant.select_food_target(food)
+
+    for _ in range(200):
+        world._update_ant_movement(ant)
+        if ant.intersects_entity(
+            food,
+            padding=settings.ANT_INTERACTION_RADIUS,
+        ):
+            break
+
+    assert ant.intersects_entity(
+        food,
+        padding=settings.ANT_INTERACTION_RADIUS,
+    )
+    assert not world._position_is_blocked(
+        ant.x,
+        ant.y,
+        radius=ant.hitbox_radius,
+    )
+    assert ant.food_target is food
+
+
+def test_returning_ant_escapes_obstacle_ceiling_corner_contact() -> None:
+    world = World(scenario="navigation_test_arena")
+    ant = world.ants[0]
+    food = world.food[0]
+    ant.x = 518
+    ant.y = settings.ANT_BOUNDARY_PADDING
+    ant.speed = 5
+    ant.inventory.add(
+        ResourcePortion(
+            source_id=food.id,
+            resource_type=ResourceType.FOOD,
+            value=1,
+        )
+    )
+    ant.select_nest_target(world.nest)
+
+    for _ in range(200):
+        world._update_ant_movement(ant)
+        if ant.intersects_entity(
+            world.nest,
+            padding=settings.ANT_INTERACTION_RADIUS,
+        ):
+            break
+
+    assert ant.intersects_entity(
+        world.nest,
+        padding=settings.ANT_INTERACTION_RADIUS,
+    )
+    assert not world._position_is_blocked(
+        ant.x,
+        ant.y,
+        radius=ant.hitbox_radius,
+    )
+    assert ant.nest_target is world.nest
+
+
 def test_first_return_trip_reaches_nest_without_pheromone_help() -> None:
     world = World(scenario="navigation_test_arena")
     ant = world.ants[0]

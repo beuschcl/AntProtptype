@@ -192,6 +192,8 @@ class World:
 
         for entity in discovered_entities:
             ant.observe(entity)
+            if isinstance(entity, Food):
+                entity.mark_discovered()
 
         return discovered_entities
 
@@ -723,24 +725,34 @@ class World:
         candidates: list[tuple[tuple[float, ...], float, tuple[float, float]]] = []
 
         for heading in self._escape_headings(base_heading):
-            candidate = self._candidate_position_for(ant, heading)
-            if self._position_is_blocked(
-                candidate[0],
-                candidate[1],
-                radius=ant.hitbox_radius,
+            for step_count in range(
+                1,
+                settings.ANT_OBSTACLE_ESCAPE_MAX_STEPS + 1,
             ):
-                continue
-
-            candidates.append(
-                (
-                    (
-                        self._target_distance_for(ant, candidate),
-                        self._heading_delta(heading, base_heading),
-                    ),
+                candidate = self._candidate_position_for(
+                    ant,
                     heading,
-                    candidate,
+                    distance=ant.speed * step_count,
                 )
-            )
+                if self._position_is_blocked(
+                    candidate[0],
+                    candidate[1],
+                    radius=ant.hitbox_radius,
+                ):
+                    continue
+
+                candidates.append(
+                    (
+                        (
+                            step_count,
+                            self._target_distance_for(ant, candidate),
+                            self._heading_delta(heading, base_heading),
+                        ),
+                        heading,
+                        candidate,
+                    )
+                )
+                break
 
         if not candidates:
             self._wall_follow_sides[ant.id] = (
@@ -1046,10 +1058,12 @@ class World:
     def _candidate_position_for(
         ant: Ant,
         heading: float,
+        distance: float | None = None,
     ) -> tuple[float, float]:
         heading_radians = math.radians(heading)
-        x = ant.x + math.cos(heading_radians) * ant.speed
-        y = ant.y + math.sin(heading_radians) * ant.speed
+        step_distance = ant.speed if distance is None else distance
+        x = ant.x + math.cos(heading_radians) * step_distance
+        y = ant.y + math.sin(heading_radians) * step_distance
         padding = settings.ANT_BOUNDARY_PADDING
         return (
             min(max(x, padding), settings.WORLD_WIDTH - padding),

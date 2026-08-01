@@ -45,6 +45,7 @@ class World:
         self._entities: list[Entity] = []
         self.selected_ant: Ant | None = None
         self._active_route_blockers: tuple[RectangleObstacle, ...] = ()
+        self._route_blocker_trip_count = 0
         self._next_pheromone_id = 1
         self._next_food_id = 1
         self._next_ant_id = settings.STARTING_ANTS
@@ -117,6 +118,10 @@ class World:
     @property
     def route_blockers_active(self) -> bool:
         return bool(self._active_route_blockers)
+
+    @property
+    def route_blocker_trip_count(self) -> int:
+        return self._route_blocker_trip_count
 
     @property
     def scenario_name(self) -> str:
@@ -251,15 +256,18 @@ class World:
         self._update_count += 1
 
     def _update_route_blockers(self) -> None:
+        if self._active_route_blockers:
+            return
+
         activation_tick = self._scenario.route_blocker_activation_tick
         if activation_tick is None:
             return
 
-        if self._active_route_blockers:
-            return
-
         if self._update_count >= activation_tick:
-            self._active_route_blockers = self._scenario.route_blockers
+            self._activate_route_blockers()
+
+    def _activate_route_blockers(self) -> None:
+        self._active_route_blockers = self._scenario.route_blockers
 
     def _assign_food_target(
         self,
@@ -436,7 +444,42 @@ class World:
         if target is None:
             return
 
-        ant.collect_from(target)
+        if ant.collect_from(target):
+            self._record_route_blocker_trip_if_needed(ant)
+
+    def _record_route_blocker_trip_if_needed(
+        self,
+        ant: Ant,
+    ) -> None:
+        activation_trip_count = (
+            self._scenario.route_blocker_activation_trip_count
+        )
+
+        if activation_trip_count is None:
+            return
+
+        if self._active_route_blockers:
+            return
+
+        if not self._return_leg_crosses_route_blocker(ant):
+            return
+
+        self._route_blocker_trip_count += 1
+
+        if self._route_blocker_trip_count >= activation_trip_count:
+            self._activate_route_blockers()
+
+    def _return_leg_crosses_route_blocker(
+        self,
+        ant: Ant,
+    ) -> bool:
+        return any(
+            blocker.intersects_segment(
+                (ant.x, ant.y),
+                (self.nest.x, self.nest.y),
+            )
+            for blocker in self._scenario.route_blockers
+        )
 
     def _deposit_pheromones(self) -> None:
         if self._update_count % settings.PHEROMONE_DEPOSIT_INTERVAL != 0:

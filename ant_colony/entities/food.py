@@ -26,10 +26,28 @@ class Food(Resource):
                 settings.FOOD_DISCOVERABLE_RADIUS
             ),
         )
+        self._is_discovered = False
 
     @property
     def nutrition(self) -> int:
         return self.value
+
+    @property
+    def is_discovered(self) -> bool:
+        return self._is_discovered
+
+    def mark_discovered(self) -> None:
+        self._is_discovered = True
+
+    def update(self) -> None:
+        if self._is_discovered:
+            return
+
+        self.discoverable_radius = min(
+            settings.FOOD_DISCOVERABLE_RADIUS_MAX,
+            self.discoverable_radius
+            + settings.FOOD_DISCOVERABLE_RADIUS_GROWTH_PER_TICK,
+        )
 
     def shapes(self) -> tuple[Shape, ...]:
         if self.is_depleted:

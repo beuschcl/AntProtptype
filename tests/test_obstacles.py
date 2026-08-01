@@ -2,13 +2,9 @@ import random
 
 import pytest
 
-from ant_colony.components import (
-    FoodTargetSource,
-    ResourcePortion,
-    ResourceType,
-)
+from ant_colony.components import ResourcePortion, ResourceType
 from ant_colony.config import settings
-from ant_colony.entities.pheromone import Pheromone, PheromoneType
+from ant_colony.entities.pheromone import PheromoneType
 from ant_colony.geometry import RectangleObstacle
 from ant_colony.scenarios import (
     NAVIGATION_TEST_ARENA,
@@ -81,7 +77,7 @@ def test_blocked_ant_tries_clear_alternate_heading() -> None:
     assert ant.food_target is food
 
 
-def test_blocked_pheromone_recruited_ant_biases_toward_matching_trail() -> None:
+def test_blocked_targeted_ant_enters_wall_follow_recovery() -> None:
     world = World(scenario="navigation_test_arena")
     ant = world.ants[0]
     food = world.food[0]
@@ -90,22 +86,11 @@ def test_blocked_pheromone_recruited_ant_biases_toward_matching_trail() -> None:
     ant.speed = 10
     food.x = 780
     food.y = 370
-    pheromone = Pheromone(
-        pheromone_id=99,
-        source_food_id=food.id,
-        pheromone_type=PheromoneType.FOOD,
-        x=460,
-        y=320,
-    )
-    world.add_entity(pheromone)
-    ant.select_food_target(
-        food,
-        source=FoodTargetSource.PHEROMONE,
-    )
+    ant.select_food_target(food)
 
     world._update_ant_movement(ant)
 
-    assert ant.y < 370
+    assert ant.id in world._wall_follow_sides
     assert not world._position_is_blocked(
         ant.x,
         ant.y,
@@ -114,13 +99,13 @@ def test_blocked_pheromone_recruited_ant_biases_toward_matching_trail() -> None:
     assert ant.food_target is food
 
 
-def test_blocked_returning_ant_biases_toward_homeward_trail() -> None:
+def test_first_return_trip_reaches_nest_without_pheromone_help() -> None:
     world = World(scenario="navigation_test_arena")
     ant = world.ants[0]
     food = world.food[0]
-    ant.x = 540
+    ant.x = 780
     ant.y = 370
-    ant.speed = 10
+    ant.speed = 5
     ant.inventory.add(
         ResourcePortion(
             source_id=food.id,
@@ -129,19 +114,23 @@ def test_blocked_returning_ant_biases_toward_homeward_trail() -> None:
         )
     )
     ant.select_nest_target(world.nest)
-    world.add_entity(
-        Pheromone(
-            pheromone_id=99,
-            source_food_id=food.id,
-            pheromone_type=PheromoneType.FOOD,
-            x=540,
-            y=320,
-        )
+
+    for _ in range(250):
+        world._update_ant_movement(ant)
+        if ant.intersects_entity(
+            world.nest,
+            padding=settings.ANT_INTERACTION_RADIUS,
+        ):
+            break
+
+    assert all(
+        pheromone.pheromone_type != PheromoneType.FOOD
+        for pheromone in world.pheromones
     )
-
-    world._update_ant_movement(ant)
-
-    assert ant.y < 370
+    assert ant.intersects_entity(
+        world.nest,
+        padding=settings.ANT_INTERACTION_RADIUS,
+    )
     assert not world._position_is_blocked(
         ant.x,
         ant.y,

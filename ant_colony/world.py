@@ -1373,11 +1373,12 @@ class World:
         *,
         radius: float = 0.0,
     ) -> bool:
+        padding = max(0.0, radius - settings.COLLISION_TANGENT_EPSILON)
         return any(
             obstacle.intersects_segment(
                 start,
                 end,
-                padding=radius,
+                padding=padding,
             )
             for obstacle in self.obstacles
         )
@@ -1389,11 +1390,15 @@ class World:
         *,
         radius: float = 0.0,
     ) -> bool:
+        collision_radius = max(
+            0.0,
+            radius - settings.COLLISION_TANGENT_EPSILON,
+        )
         return any(
             obstacle.intersects_circle(
                 x,
                 y,
-                radius,
+                collision_radius,
             )
             for obstacle in self.obstacles
         )

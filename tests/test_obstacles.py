@@ -644,16 +644,24 @@ def test_maze_pheromone_arena_uses_rectilinear_maze_walls() -> None:
 
     assert world.scenario_name == settings.MAZE_PHEROMONE_ARENA_NAME
     assert world.max_ants == settings.MAZE_PHEROMONE_ARENA_MAX_ANTS
-    assert len(world.obstacles) == 21
+    assert len(world.obstacles) == 16
     assert world.nest.x < settings.WORLD_WIDTH / 2
     assert all(food.x > settings.WORLD_WIDTH / 2 for food in world.food)
 
     assert world._position_is_blocked(192, 100)
-    assert world._position_is_blocked(315, 100)
+    assert world._position_is_blocked(315, 160)
     assert world._position_is_blocked(515, 420)
     assert world._position_is_blocked(715, 200)
-    assert world._position_is_blocked(750, 310)
 
+    assert not world._position_is_blocked(
+        340,
+        90,
+        radius=settings.ANT_RADIUS,
+    )
+    assert not world._position_is_blocked(440, 310)
+    assert not world._position_is_blocked(780, 315)
+    assert not world._position_is_blocked(715, 665)
+    assert not world._position_is_blocked(600, 130)
     assert not world._position_is_blocked(190, 350)
     assert not world._position_is_blocked(850, 350)
     assert not world._position_is_blocked(315, 350)

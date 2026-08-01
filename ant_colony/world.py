@@ -53,6 +53,7 @@ class World:
         self._rng = rng if rng is not None else _random_module.Random()
         self._blocked_headings: dict[int, list[tuple[float, int]]] = {}
         self._wall_follow_sides: dict[int, int] = {}
+        self._wall_follow_progress: dict[int, tuple[float, int]] = {}
 
         nest_x, nest_y = self._scenario.nest_position
         self._require_spawn_position_available(
@@ -597,12 +598,17 @@ class World:
         left_score = self._wall_follow_side_score(ant, base_heading, -1)
         right_score = self._wall_follow_side_score(ant, base_heading, 1)
         self._wall_follow_sides[ant.id] = -1 if left_score <= right_score else 1
+        self._wall_follow_progress[ant.id] = (
+            self._target_distance_for(ant, (ant.x, ant.y)),
+            0,
+        )
 
     def _stop_wall_following(
         self,
         ant: Ant,
     ) -> None:
         self._wall_follow_sides.pop(ant.id, None)
+        self._wall_follow_progress.pop(ant.id, None)
 
     @staticmethod
     def _has_navigation_target(
@@ -674,6 +680,13 @@ class World:
     ) -> None:
         base_heading = self._preferred_heading_for(ant)
         side = self._wall_follow_sides.get(ant.id, -1)
+        if (
+            self._wall_follow_is_stalled(ant)
+            and self._try_boundary_recovery_step(ant, base_heading)
+        ):
+            self._start_wall_following(ant)
+            return
+
         headings = tuple(
             (base_heading + offset * side) % 360
             for offset in (90, 60, 120, 45, 135)
@@ -722,6 +735,65 @@ class World:
             self._start_wall_following(ant)
         else:
             ant.heading = (base_heading + 180) % 360
+
+    def _wall_follow_is_stalled(
+        self,
+        ant: Ant,
+    ) -> bool:
+        current_distance = self._target_distance_for(ant, (ant.x, ant.y))
+        best_distance, stale_ticks = self._wall_follow_progress.get(
+            ant.id,
+            (current_distance, 0),
+        )
+
+        if current_distance < best_distance - 0.5:
+            self._wall_follow_progress[ant.id] = (current_distance, 0)
+            return False
+
+        stale_ticks += 1
+        self._wall_follow_progress[ant.id] = (best_distance, stale_ticks)
+        return stale_ticks >= settings.ANT_WALL_FOLLOW_STALL_TICKS
+
+    def _try_boundary_recovery_step(
+        self,
+        ant: Ant,
+        base_heading: float,
+    ) -> bool:
+        if self._world_boundary_clearance(ant.x, ant.y) > ant.speed:
+            return False
+
+        candidates: list[tuple[tuple[float, ...], float, tuple[float, float]]] = []
+        for heading in self._escape_headings(base_heading):
+            candidate = self._candidate_position_for(ant, heading)
+            if self._movement_intersects_obstacle(
+                (ant.x, ant.y),
+                candidate,
+                radius=ant.hitbox_radius,
+            ):
+                continue
+
+            candidates.append(
+                (
+                    (
+                        -self._world_boundary_clearance(
+                            candidate[0],
+                            candidate[1],
+                        ),
+                        self._target_distance_for(ant, candidate),
+                        self._heading_delta(heading, base_heading),
+                    ),
+                    heading,
+                    candidate,
+                )
+            )
+
+        if not candidates:
+            return False
+
+        _, heading, candidate = min(candidates)
+        ant.x, ant.y = candidate
+        ant.heading = heading % 360
+        return True
 
     def _move_ant_out_of_obstacle_contact(
         self,

@@ -496,7 +496,7 @@ def test_repeated_blocked_ant_prefers_backing_up_to_wall_sliding() -> None:
     assert not world._position_is_blocked(
         ant.x,
         ant.y,
-        radius=ant.hitbox_radius,
+        radius=settings.ANT_RADIUS,
     )
 
 
@@ -644,7 +644,7 @@ def test_maze_pheromone_arena_uses_rectilinear_maze_walls() -> None:
 
     assert world.scenario_name == settings.MAZE_PHEROMONE_ARENA_NAME
     assert world.max_ants == settings.MAZE_PHEROMONE_ARENA_MAX_ANTS
-    assert len(world.obstacles) == 16
+    assert len(world.obstacles) == 17
     assert world.nest.x < settings.WORLD_WIDTH / 2
     assert all(food.x > settings.WORLD_WIDTH / 2 for food in world.food)
 
@@ -657,6 +657,11 @@ def test_maze_pheromone_arena_uses_rectilinear_maze_walls() -> None:
         340,
         90,
         radius=settings.ANT_RADIUS,
+    )
+    assert not world._position_is_blocked(
+        670,
+        95,
+        radius=settings.ANT_RADIUS * 2,
     )
     assert not world._position_is_blocked(440, 310)
     assert not world._position_is_blocked(780, 315)

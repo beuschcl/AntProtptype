@@ -1257,13 +1257,6 @@ class World:
             if ant.food_target is resource:
                 ant.clear_food_target()
 
-        for pheromone in self.pheromones:
-            if (
-                pheromone.pheromone_type == PheromoneType.FOOD
-                and pheromone.source_food_id == resource.id
-            ):
-                self.remove_entity(pheromone)
-
     def __iter__(self) -> Iterator[Entity]:
         return iter(self._entities)
 

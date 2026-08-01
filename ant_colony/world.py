@@ -519,7 +519,7 @@ class World:
         heading: float,
         base_heading: float,
     ) -> tuple[float, ...]:
-        pheromone_distance = self._matching_pheromone_distance(
+        pheromone_distance = self._route_pheromone_distance(
             ant,
             candidate,
         )
@@ -540,22 +540,21 @@ class World:
             self._heading_delta(heading, base_heading),
         )
 
-    def _matching_pheromone_distance(
+    def _route_pheromone_distance(
         self,
         ant: Ant,
         candidate: tuple[float, float],
     ) -> float | None:
-        if (
-            ant.food_target_source != FoodTargetSource.PHEROMONE
-            or ant.food_target is None
-        ):
+        source_ids = self._route_pheromone_source_ids(ant)
+        if not source_ids:
             return None
 
         matching_pheromones = tuple(
             pheromone
             for pheromone in self.pheromones
-            if pheromone.source_food_id == ant.food_target.id
+            if pheromone.source_food_id in source_ids
             and ant.senses.can_detect(ant, pheromone)
+            and self._pheromone_supports_current_route(ant, pheromone)
         )
 
         if not matching_pheromones:
@@ -568,6 +567,45 @@ class World:
             )
             for pheromone in matching_pheromones
         )
+
+    @staticmethod
+    def _route_pheromone_source_ids(
+        ant: Ant,
+    ) -> tuple[int | str, ...]:
+        if (
+            ant.food_target_source == FoodTargetSource.PHEROMONE
+            and ant.food_target is not None
+        ):
+            return (ant.food_target.id,)
+
+        if ant.state == AntState.CARRYING_FOOD:
+            return tuple(
+                portion.source_id
+                for portion in ant.inventory
+            )
+
+        return ()
+
+    def _pheromone_supports_current_route(
+        self,
+        ant: Ant,
+        pheromone: Pheromone,
+    ) -> bool:
+        if ant.state != AntState.CARRYING_FOOD:
+            return True
+
+        if ant.nest_target is None:
+            return False
+
+        current_nest_distance = math.hypot(
+            ant.nest_target.x - ant.x,
+            ant.nest_target.y - ant.y,
+        )
+        pheromone_nest_distance = math.hypot(
+            ant.nest_target.x - pheromone.x,
+            ant.nest_target.y - pheromone.y,
+        )
+        return pheromone_nest_distance < current_nest_distance
 
     def _target_distance_for(
         self,

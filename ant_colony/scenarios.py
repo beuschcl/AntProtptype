@@ -16,6 +16,7 @@ class Scenario:
     obstacles: tuple[RectangleObstacle, ...] = ()
     route_blockers: tuple[RectangleObstacle, ...] = ()
     route_blocker_activation_tick: int | None = None
+    route_blocker_activation_trip_count: int | None = None
 
 
 DEFAULT_SCENARIO = Scenario(
@@ -74,7 +75,10 @@ ROUTE_REASSESSMENT_ARENA = Scenario(
         in settings.ROUTE_REASSESSMENT_ARENA_BLOCKERS
     ),
     route_blocker_activation_tick=(
-        settings.ROUTE_REASSESSMENT_ARENA_BLOCKER_ACTIVATION_TICK
+        None
+    ),
+    route_blocker_activation_trip_count=(
+        settings.ROUTE_REASSESSMENT_ARENA_BLOCKER_ACTIVATION_TRIP_COUNT
     ),
 )
 

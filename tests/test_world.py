@@ -570,7 +570,7 @@ def test_ant_returns_to_remembered_food_after_delivery() -> None:
 
     world.update()
 
-    assert ant.inventory.count() == 1
+    assert ant.inventory.count() == settings.ANT_FOOD_PICKUP_AMOUNT
     assert ant.state == AntState.CARRYING_FOOD
 
     ant.x = nest.x
@@ -599,8 +599,8 @@ def test_world_collects_food_for_ant() -> None:
 
     world.update()
 
-    assert ant.inventory.count() == 1
-    assert food.quantity == 9
+    assert ant.inventory.count() == settings.ANT_FOOD_PICKUP_AMOUNT
+    assert food.quantity == 10 - settings.ANT_FOOD_PICKUP_AMOUNT
     assert ant.state == AntState.CARRYING_FOOD
 
 

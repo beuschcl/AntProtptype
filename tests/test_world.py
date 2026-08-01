@@ -11,7 +11,7 @@ from ant_colony.entities.ant import Ant
 from ant_colony.entities.entity import Entity
 from ant_colony.entities.food import Food
 from ant_colony.entities.nest import Nest
-from ant_colony.entities.pheromone import Pheromone
+from ant_colony.entities.pheromone import Pheromone, PheromoneType
 from ant_colony.entities.resource import Resource
 from ant_colony.knowledge import EntityObservation
 from ant_colony.world import World
@@ -766,11 +766,12 @@ def test_world_deposits_pheromone_for_carrying_ant() -> None:
     pheromone = world.pheromones[0]
 
     assert pheromone.source_food_id == 1
+    assert pheromone.pheromone_type == PheromoneType.FOOD
     assert pheromone.x == 100
     assert pheromone.y == 200
 
 
-def test_world_does_not_deposit_for_wandering_ant() -> None:
+def test_world_deposits_explore_pheromone_for_wandering_ant() -> None:
     world = World()
     for food in world.food:
         food.x = settings.WORLD_WIDTH
@@ -783,7 +784,34 @@ def test_world_does_not_deposit_for_wandering_ant() -> None:
 
     world.update()
 
-    assert world.pheromones == ()
+    assert len(world.pheromones) == len(world.ants)
+    assert all(
+        pheromone.pheromone_type == PheromoneType.EXPLORE
+        for pheromone in world.pheromones
+    )
+    assert all(
+        pheromone.source_food_id is None
+        for pheromone in world.pheromones
+    )
+
+
+def test_world_deposits_food_pheromone_for_ant_seeking_food() -> None:
+    world = World()
+    ant = world.ants[0]
+    food = world.food[0]
+    ant.x = 100
+    ant.y = 200
+    ant.speed = 0
+    ant.select_food_target(food)
+
+    world.update()
+
+    assert len(world.pheromones) == 1
+    pheromone = world.pheromones[0]
+    assert pheromone.pheromone_type == PheromoneType.FOOD
+    assert pheromone.source_food_id == food.id
+    assert pheromone.x == 100
+    assert pheromone.y == 200
 
 
 def test_world_respects_pheromone_deposit_interval() -> None:
@@ -843,7 +871,7 @@ def test_world_removes_depleted_pheromone() -> None:
     world.update()
 
     assert pheromone not in world.entities
-    assert world.pheromones == ()
+    assert pheromone not in world.pheromones
 
 
 def test_world_removes_pheromones_when_source_food_is_removed() -> None:

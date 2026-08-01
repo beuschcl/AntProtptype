@@ -496,6 +496,14 @@ class World:
         previous_position = (ant.x, ant.y)
         previous_heading = ant.heading
 
+        if self._position_is_blocked(
+            ant.x,
+            ant.y,
+            radius=ant.hitbox_radius,
+        ):
+            self._move_ant_out_of_obstacle_contact(ant)
+            return
+
         if self._is_wall_following(ant):
             if (
                 self._direct_route_to_target_is_clear(ant)
@@ -564,7 +572,8 @@ class World:
             ant.heading = heading % 360
             return
 
-        ant.heading = (base_heading + 180) % 360
+        if not self._move_ant_out_of_obstacle_contact(ant):
+            ant.heading = (base_heading + 180) % 360
 
     def _is_wall_following(
         self,
@@ -703,7 +712,46 @@ class World:
             return
 
         self._wall_follow_sides[ant.id] = -side
-        ant.heading = (base_heading + 180) % 360
+        if not self._move_ant_out_of_obstacle_contact(ant):
+            ant.heading = (base_heading + 180) % 360
+
+    def _move_ant_out_of_obstacle_contact(
+        self,
+        ant: Ant,
+    ) -> bool:
+        base_heading = self._preferred_heading_for(ant)
+        candidates: list[tuple[tuple[float, ...], float, tuple[float, float]]] = []
+
+        for heading in self._escape_headings(base_heading):
+            candidate = self._candidate_position_for(ant, heading)
+            if self._position_is_blocked(
+                candidate[0],
+                candidate[1],
+                radius=ant.hitbox_radius,
+            ):
+                continue
+
+            candidates.append(
+                (
+                    (
+                        self._target_distance_for(ant, candidate),
+                        self._heading_delta(heading, base_heading),
+                    ),
+                    heading,
+                    candidate,
+                )
+            )
+
+        if not candidates:
+            self._wall_follow_sides[ant.id] = (
+                -self._wall_follow_sides.get(ant.id, -1)
+            )
+            return False
+
+        _, heading, candidate = min(candidates)
+        ant.x, ant.y = candidate
+        ant.heading = heading % 360
+        return True
 
     def _avoidance_score(
         self,
@@ -883,6 +931,24 @@ class World:
         return tuple(
             (base_heading + offset) % 360
             for offset in (
+                45,
+                -45,
+                90,
+                -90,
+                135,
+                -135,
+                180,
+            )
+        )
+
+    @staticmethod
+    def _escape_headings(
+        base_heading: float,
+    ) -> tuple[float, ...]:
+        return tuple(
+            (base_heading + offset) % 360
+            for offset in (
+                0,
                 45,
                 -45,
                 90,

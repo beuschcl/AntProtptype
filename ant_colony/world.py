@@ -478,6 +478,9 @@ class World:
         ant: Ant,
     ) -> None:
         base_heading = self._preferred_heading_for(ant)
+        clear_candidates: list[
+            tuple[tuple[float, ...], float, tuple[float, float]]
+        ] = []
 
         for heading in self._avoidance_headings(base_heading):
             candidate = self._candidate_position_for(ant, heading)
@@ -488,11 +491,109 @@ class World:
             ):
                 continue
 
+            clear_candidates.append(
+                (
+                    self._avoidance_score(
+                        ant,
+                        candidate,
+                        heading,
+                        base_heading,
+                    ),
+                    heading,
+                    candidate,
+                )
+            )
+
+        if clear_candidates:
+            _, heading, candidate = min(clear_candidates)
             ant.x, ant.y = candidate
             ant.heading = heading % 360
             return
 
         ant.heading = (base_heading + 180) % 360
+
+    def _avoidance_score(
+        self,
+        ant: Ant,
+        candidate: tuple[float, float],
+        heading: float,
+        base_heading: float,
+    ) -> tuple[float, ...]:
+        pheromone_distance = self._matching_pheromone_distance(
+            ant,
+            candidate,
+        )
+        if pheromone_distance is not None:
+            return (
+                0,
+                pheromone_distance,
+                self._heading_delta(heading, base_heading),
+            )
+
+        target_distance = self._target_distance_for(
+            ant,
+            candidate,
+        )
+        return (
+            1,
+            target_distance,
+            self._heading_delta(heading, base_heading),
+        )
+
+    def _matching_pheromone_distance(
+        self,
+        ant: Ant,
+        candidate: tuple[float, float],
+    ) -> float | None:
+        if (
+            ant.food_target_source != FoodTargetSource.PHEROMONE
+            or ant.food_target is None
+        ):
+            return None
+
+        matching_pheromones = tuple(
+            pheromone
+            for pheromone in self.pheromones
+            if pheromone.source_food_id == ant.food_target.id
+            and ant.senses.can_detect(ant, pheromone)
+        )
+
+        if not matching_pheromones:
+            return None
+
+        return min(
+            math.hypot(
+                candidate[0] - pheromone.x,
+                candidate[1] - pheromone.y,
+            )
+            for pheromone in matching_pheromones
+        )
+
+    def _target_distance_for(
+        self,
+        ant: Ant,
+        candidate: tuple[float, float],
+    ) -> float:
+        target: tuple[float, float] | None = None
+        if ant.state == AntState.SEEKING_FOOD and ant.food_target is not None:
+            target = (ant.food_target.x, ant.food_target.y)
+        elif ant.state == AntState.CARRYING_FOOD and ant.nest_target is not None:
+            target = (ant.nest_target.x, ant.nest_target.y)
+
+        if target is None:
+            return 0
+
+        return math.hypot(
+            target[0] - candidate[0],
+            target[1] - candidate[1],
+        )
+
+    @staticmethod
+    def _heading_delta(
+        heading: float,
+        base_heading: float,
+    ) -> float:
+        return abs((heading - base_heading + 180) % 360 - 180)
 
     def _preferred_heading_for(
         self,

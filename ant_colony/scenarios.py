@@ -14,6 +14,8 @@ class Scenario:
         tuple[float, float], ...
     ]
     obstacles: tuple[RectangleObstacle, ...] = ()
+    route_blockers: tuple[RectangleObstacle, ...] = ()
+    route_blocker_activation_tick: int | None = None
 
 
 DEFAULT_SCENARIO = Scenario(
@@ -45,10 +47,42 @@ NAVIGATION_TEST_ARENA = Scenario(
     ),
 )
 
+ROUTE_REASSESSMENT_ARENA = Scenario(
+    name=settings.ROUTE_REASSESSMENT_ARENA_NAME,
+    nest_position=settings.ROUTE_REASSESSMENT_ARENA_NEST_POSITION,
+    initial_food_positions=(
+        settings.ROUTE_REASSESSMENT_ARENA_INITIAL_FOOD_POSITIONS
+    ),
+    obstacles=tuple(
+        RectangleObstacle(
+            x=x,
+            y=y,
+            width=width,
+            height=height,
+        )
+        for x, y, width, height
+        in settings.ROUTE_REASSESSMENT_ARENA_OBSTACLES
+    ),
+    route_blockers=tuple(
+        RectangleObstacle(
+            x=x,
+            y=y,
+            width=width,
+            height=height,
+        )
+        for x, y, width, height
+        in settings.ROUTE_REASSESSMENT_ARENA_BLOCKERS
+    ),
+    route_blocker_activation_tick=(
+        settings.ROUTE_REASSESSMENT_ARENA_BLOCKER_ACTIVATION_TICK
+    ),
+)
+
 
 _SCENARIOS = {
     DEFAULT_SCENARIO.name: DEFAULT_SCENARIO,
     NAVIGATION_TEST_ARENA.name: NAVIGATION_TEST_ARENA,
+    ROUTE_REASSESSMENT_ARENA.name: ROUTE_REASSESSMENT_ARENA,
 }
 
 

@@ -44,7 +44,7 @@ class World:
 
         self._entities: list[Entity] = []
         self.selected_ant: Ant | None = None
-        self._obstacles = self._scenario.obstacles
+        self._active_route_blockers: tuple[RectangleObstacle, ...] = ()
         self._next_pheromone_id = 1
         self._next_food_id = 1
         self._next_ant_id = settings.STARTING_ANTS
@@ -108,7 +108,15 @@ class World:
 
     @property
     def obstacles(self) -> tuple[RectangleObstacle, ...]:
-        return self._obstacles
+        return self._scenario.obstacles + self._active_route_blockers
+
+    @property
+    def route_blockers(self) -> tuple[RectangleObstacle, ...]:
+        return self._scenario.route_blockers
+
+    @property
+    def route_blockers_active(self) -> bool:
+        return bool(self._active_route_blockers)
 
     @property
     def scenario_name(self) -> str:
@@ -202,6 +210,8 @@ class World:
         if self._colony_complete:
             return
 
+        self._update_route_blockers()
+
         for ant in self.ants:
             discovered_entities = self.sense_for(ant)
 
@@ -239,6 +249,17 @@ class World:
         self._remove_depleted_resources()
         self._remove_depleted_pheromones()
         self._update_count += 1
+
+    def _update_route_blockers(self) -> None:
+        activation_tick = self._scenario.route_blocker_activation_tick
+        if activation_tick is None:
+            return
+
+        if self._active_route_blockers:
+            return
+
+        if self._update_count >= activation_tick:
+            self._active_route_blockers = self._scenario.route_blockers
 
     def _assign_food_target(
         self,
@@ -1311,7 +1332,7 @@ class World:
                 end,
                 padding=radius,
             )
-            for obstacle in self._obstacles
+            for obstacle in self.obstacles
         )
 
     def _position_is_blocked(
@@ -1327,7 +1348,7 @@ class World:
                 y,
                 radius,
             )
-            for obstacle in self._obstacles
+            for obstacle in self.obstacles
         )
 
     def _require_spawn_position_available(

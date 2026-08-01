@@ -144,6 +144,10 @@ class World:
         """True once the colony has reached ``MAX_ANTS`` for the first time."""
         return self._colony_complete
 
+    @property
+    def max_ants(self) -> int:
+        return self._scenario.max_ants or settings.MAX_ANTS
+
     def add_entity(
         self,
         entity: Entity,
@@ -1267,7 +1271,7 @@ class World:
                 ant.energy.restore(settings.ANT_REFUEL_ENERGY_AMOUNT)
 
     def _maybe_spawn_ant(self) -> None:
-        if len(self.ants) >= settings.MAX_ANTS:
+        if len(self.ants) >= self.max_ants:
             return
 
         nest = self.nest

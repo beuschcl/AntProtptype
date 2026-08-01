@@ -1,3 +1,4 @@
+import math
 import random as _random_module
 from collections.abc import Iterator
 from typing import TypeVar
@@ -461,6 +462,7 @@ class World:
                 return
 
         previous_position = (ant.x, ant.y)
+        previous_heading = ant.heading
         ant.update()
         if self._movement_intersects_obstacle(
             previous_position,
@@ -468,6 +470,80 @@ class World:
             radius=ant.hitbox_radius,
         ):
             ant.x, ant.y = previous_position
+            ant.heading = previous_heading
+            self._move_ant_around_obstacle(ant)
+
+    def _move_ant_around_obstacle(
+        self,
+        ant: Ant,
+    ) -> None:
+        base_heading = self._preferred_heading_for(ant)
+
+        for heading in self._avoidance_headings(base_heading):
+            candidate = self._candidate_position_for(ant, heading)
+            if self._movement_intersects_obstacle(
+                (ant.x, ant.y),
+                candidate,
+                radius=ant.hitbox_radius,
+            ):
+                continue
+
+            ant.x, ant.y = candidate
+            ant.heading = heading % 360
+            return
+
+        ant.heading = (base_heading + 180) % 360
+
+    def _preferred_heading_for(
+        self,
+        ant: Ant,
+    ) -> float:
+        target: tuple[float, float] | None = None
+        if ant.state == AntState.SEEKING_FOOD and ant.food_target is not None:
+            target = (ant.food_target.x, ant.food_target.y)
+        elif ant.state == AntState.CARRYING_FOOD and ant.nest_target is not None:
+            target = (ant.nest_target.x, ant.nest_target.y)
+
+        if target is None:
+            return ant.heading
+
+        return math.degrees(
+            math.atan2(
+                target[1] - ant.y,
+                target[0] - ant.x,
+            )
+        )
+
+    @staticmethod
+    def _avoidance_headings(
+        base_heading: float,
+    ) -> tuple[float, ...]:
+        return tuple(
+            (base_heading + offset) % 360
+            for offset in (
+                45,
+                -45,
+                90,
+                -90,
+                135,
+                -135,
+                180,
+            )
+        )
+
+    @staticmethod
+    def _candidate_position_for(
+        ant: Ant,
+        heading: float,
+    ) -> tuple[float, float]:
+        heading_radians = math.radians(heading)
+        x = ant.x + math.cos(heading_radians) * ant.speed
+        y = ant.y + math.sin(heading_radians) * ant.speed
+        padding = settings.ANT_BOUNDARY_PADDING
+        return (
+            min(max(x, padding), settings.WORLD_WIDTH - padding),
+            min(max(y, padding), settings.WORLD_HEIGHT - padding),
+        )
 
     def _process_upkeep(self) -> None:
         """Refuel ants physically at the nest in ascending ID order.

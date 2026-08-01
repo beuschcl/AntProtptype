@@ -8,7 +8,7 @@ from ant_colony.components import (
     ResourceType,
 )
 from ant_colony.config import settings
-from ant_colony.entities.pheromone import Pheromone
+from ant_colony.entities.pheromone import Pheromone, PheromoneType
 from ant_colony.geometry import RectangleObstacle
 from ant_colony.scenarios import (
     NAVIGATION_TEST_ARENA,
@@ -93,6 +93,7 @@ def test_blocked_pheromone_recruited_ant_biases_toward_matching_trail() -> None:
     pheromone = Pheromone(
         pheromone_id=99,
         source_food_id=food.id,
+        pheromone_type=PheromoneType.FOOD,
         x=460,
         y=320,
     )
@@ -132,6 +133,7 @@ def test_blocked_returning_ant_biases_toward_homeward_trail() -> None:
         Pheromone(
             pheromone_id=99,
             source_food_id=food.id,
+            pheromone_type=PheromoneType.FOOD,
             x=540,
             y=320,
         )
@@ -146,6 +148,47 @@ def test_blocked_returning_ant_biases_toward_homeward_trail() -> None:
         radius=ant.hitbox_radius,
     )
     assert ant.nest_target is world.nest
+
+
+def test_repeated_blocked_ant_drops_avoid_pheromone() -> None:
+    world = World(scenario="navigation_test_arena")
+    ant = world.ants[0]
+    ant.x = 475
+    ant.y = 370
+    ant.speed = 10
+
+    world._record_blocked_heading(ant, 0)
+    blocked_count = world._record_blocked_heading(ant, 0)
+    if blocked_count >= settings.ANT_AVOID_PHEROMONE_REPEAT_COUNT:
+        world._deposit_avoid_pheromone_for(ant)
+
+    assert world.pheromones[-1].pheromone_type == PheromoneType.AVOID
+    assert world.pheromones[-1].source_food_id is None
+
+
+def test_repeated_blocked_ant_prefers_backing_up_to_wall_sliding() -> None:
+    world = World(scenario="navigation_test_arena")
+    ant = world.ants[0]
+    food = world.food[0]
+    ant.x = 460
+    ant.y = 370
+    ant.speed = 10
+    food.x = 780
+    food.y = 370
+    ant.select_food_target(food)
+
+    world._move_ant_around_obstacle(
+        ant,
+        blocked_count=settings.ANT_AVOID_PHEROMONE_REPEAT_COUNT,
+    )
+
+    assert ant.x < 460
+    assert ant.y == 370
+    assert not world._position_is_blocked(
+        ant.x,
+        ant.y,
+        radius=ant.hitbox_radius,
+    )
 
 
 def test_spawn_rejects_blocked_nest_position() -> None:

@@ -8,6 +8,7 @@ from ant_colony.entities.pheromone import PheromoneType
 from ant_colony.geometry import RectangleObstacle
 from ant_colony.scenarios import (
     NAVIGATION_TEST_ARENA,
+    ROUTE_REASSESSMENT_ARENA,
     Scenario,
 )
 from ant_colony.world import World
@@ -554,3 +555,68 @@ def test_navigation_test_arena_layout_matches_expected_corridors() -> None:
     assert world._position_is_blocked(500, 370)
     assert not world._position_is_blocked(500, 320)
     assert not world._position_is_blocked(500, 520)
+
+
+def test_route_reassessment_arena_starts_with_short_route_open() -> None:
+    world = World(scenario=ROUTE_REASSESSMENT_ARENA)
+
+    assert world.scenario_name == settings.ROUTE_REASSESSMENT_ARENA_NAME
+    assert not world.route_blockers_active
+    assert world.route_blockers == ROUTE_REASSESSMENT_ARENA.route_blockers
+    assert len(world.obstacles) == len(
+        ROUTE_REASSESSMENT_ARENA.obstacles
+    )
+
+    assert not world._position_is_blocked(500, 320)
+    assert not world._position_is_blocked(500, 520)
+
+
+def test_route_reassessment_arena_closes_short_route_on_schedule() -> None:
+    world = World(scenario=ROUTE_REASSESSMENT_ARENA)
+
+    for _ in range(settings.ROUTE_REASSESSMENT_ARENA_BLOCKER_ACTIVATION_TICK):
+        world.update()
+
+    assert not world.route_blockers_active
+
+    world.update()
+
+    assert world.route_blockers_active
+    assert len(world.obstacles) == (
+        len(ROUTE_REASSESSMENT_ARENA.obstacles)
+        + len(ROUTE_REASSESSMENT_ARENA.route_blockers)
+    )
+    assert world._position_is_blocked(500, 320)
+    assert not world._position_is_blocked(500, 520)
+
+
+def test_ant_reaches_food_through_alternate_route_after_short_route_closes() -> None:
+    world = World(scenario=ROUTE_REASSESSMENT_ARENA)
+    world._active_route_blockers = world.route_blockers
+    ant = world.ants[0]
+    food = world.food[0]
+    ant.x = 460
+    ant.y = 320
+    ant.speed = 5
+    ant.select_food_target(food)
+
+    lowest_y = ant.y
+    for _ in range(450):
+        world._update_ant_movement(ant)
+        lowest_y = max(lowest_y, ant.y)
+        if ant.intersects_entity(
+            food,
+            padding=settings.ANT_INTERACTION_RADIUS,
+        ):
+            break
+
+    assert ant.intersects_entity(
+        food,
+        padding=settings.ANT_INTERACTION_RADIUS,
+    )
+    assert lowest_y > 460
+    assert not world._position_is_blocked(
+        ant.x,
+        ant.y,
+        radius=ant.hitbox_radius,
+    )

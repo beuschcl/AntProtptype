@@ -31,7 +31,14 @@ def _fit_camera_to_layout(
     )
 
 
-def main() -> None:
+def main(
+    *,
+    scenario_name: str | None = None,
+    show_grid: bool = False,
+    show_hitboxes: bool = False,
+    show_radius_overlays: bool = False,
+    window_title: str = settings.WINDOW_TITLE,
+) -> None:
     pygame.init()
 
     try:
@@ -39,24 +46,25 @@ def main() -> None:
         window = WindowController()
         screen = window.create_screen()
 
-        pygame.display.set_caption(
-            settings.WINDOW_TITLE
-        )
+        pygame.display.set_caption(window_title)
 
         clock = pygame.time.Clock()
         camera = Camera()
-        scenario_name = os.getenv(
+        selected_scenario_name = scenario_name or os.getenv(
             settings.DEFAULT_SCENARIO_ENV_VAR,
             settings.DEFAULT_SCENARIO_NAME,
         )
         world = World(
             rng=_random_module.Random(world_seed),
-            scenario=scenario_name,
+            scenario=selected_scenario_name,
         )
         renderer = Renderer(
             screen,
             camera,
         )
+        renderer.show_grid = show_grid
+        renderer.show_hitboxes = show_hitboxes
+        renderer.show_radius_overlays = show_radius_overlays
         inspector = Inspector()
         completion_overlay = CompletionOverlay()
 
@@ -74,7 +82,7 @@ def main() -> None:
                     if action == "restart":
                         world = World(
                             rng=_random_module.Random(world_seed),
-                            scenario=scenario_name,
+                            scenario=selected_scenario_name,
                         )
                         world_restarted = True
                     elif action == "exit":

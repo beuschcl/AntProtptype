@@ -1,3 +1,4 @@
+import math
 import random as _random_module
 from collections.abc import Iterator
 from typing import TypeVar
@@ -12,7 +13,7 @@ from ant_colony.entities.ant import Ant
 from ant_colony.entities.entity import Entity
 from ant_colony.entities.food import Food
 from ant_colony.entities.nest import Nest
-from ant_colony.entities.pheromone import Pheromone
+from ant_colony.entities.pheromone import Pheromone, PheromoneType
 from ant_colony.entities.resource import Resource
 from ant_colony.geometry import RectangleObstacle
 from ant_colony.knowledge import EntityObservation
@@ -50,6 +51,9 @@ class World:
         self._update_count = 0
         self._colony_complete = False
         self._rng = rng if rng is not None else _random_module.Random()
+        self._blocked_headings: dict[int, list[tuple[float, int]]] = {}
+        self._wall_follow_sides: dict[int, int] = {}
+        self._wall_follow_progress: dict[int, tuple[float, int]] = {}
 
         nest_x, nest_y = self._scenario.nest_position
         self._require_spawn_position_available(
@@ -189,6 +193,8 @@ class World:
 
         for entity in discovered_entities:
             ant.observe(entity)
+            if isinstance(entity, Food):
+                entity.mark_discovered()
 
         return discovered_entities
 
@@ -312,6 +318,9 @@ class World:
             if not isinstance(entity, Pheromone):
                 continue
 
+            if entity.pheromone_type != PheromoneType.FOOD:
+                continue
+
             source_food = food_by_id.get(entity.source_food_id)
 
             if source_food is None:
@@ -413,35 +422,61 @@ class World:
             return
 
         for ant in self.ants:
-            if ant.state != AntState.CARRYING_FOOD:
-                continue
+            self._deposit_pheromone_for_ant(ant)
 
-            if ant.inventory.is_empty:
-                continue
+    def _deposit_pheromone_for_ant(
+        self,
+        ant: Ant,
+    ) -> None:
+        pheromone_type = self._pheromone_type_for(ant)
+        source_food_id = self._pheromone_source_food_id_for(ant)
 
-            carried_food_portion = next(
-                (
-                    portion
-                    for portion in ant.inventory.items
-                    if portion.resource_type == ResourceType.FOOD
-                    and isinstance(portion.source_id, int)
-                ),
-                None,
+        if pheromone_type == PheromoneType.FOOD and source_food_id is None:
+            return
+
+        self.add_entity(
+            Pheromone(
+                pheromone_id=self._next_pheromone_id,
+                source_food_id=source_food_id,
+                pheromone_type=pheromone_type,
+                x=ant.x,
+                y=ant.y,
             )
+        )
+        self._next_pheromone_id += 1
 
-            if carried_food_portion is None:
-                continue
+    @staticmethod
+    def _pheromone_type_for(
+        ant: Ant,
+    ) -> PheromoneType:
+        if ant.state in (AntState.SEEKING_FOOD, AntState.CARRYING_FOOD):
+            return PheromoneType.FOOD
+        return PheromoneType.EXPLORE
 
-            self.add_entity(
-                Pheromone(
-                    pheromone_id=self._next_pheromone_id,
-                    source_food_id=carried_food_portion.source_id,
-                    x=ant.x,
-                    y=ant.y,
-                )
-            )
+    @staticmethod
+    def _pheromone_source_food_id_for(
+        ant: Ant,
+    ) -> int | None:
+        if ant.state == AntState.SEEKING_FOOD and ant.food_target is not None:
+            return ant.food_target.id
 
-            self._next_pheromone_id += 1
+        if ant.state != AntState.CARRYING_FOOD:
+            return None
+
+        carried_food_portion = next(
+            (
+                portion
+                for portion in ant.inventory.items
+                if portion.resource_type == ResourceType.FOOD
+                and isinstance(portion.source_id, int)
+            ),
+            None,
+        )
+
+        if carried_food_portion is None:
+            return None
+
+        return carried_food_portion.source_id
 
     def _update_ant_movement(self, ant: Ant) -> None:
         """Move an ant for one tick, gating wandering departure on nest proximity.
@@ -460,14 +495,690 @@ class World:
             if not ant.depart():
                 return
 
+        self._decay_blocked_headings_for(ant)
         previous_position = (ant.x, ant.y)
+        previous_heading = ant.heading
+
+        if self._position_is_blocked(
+            ant.x,
+            ant.y,
+            radius=ant.hitbox_radius,
+        ):
+            if self._move_ant_out_of_obstacle_contact(ant):
+                self._start_wall_following(ant)
+            return
+
+        if self._is_wall_following(ant):
+            if (
+                self._direct_route_to_target_is_clear(ant)
+                and self._try_direct_navigation_step(ant)
+            ):
+                self._stop_wall_following(ant)
+                return
+
+            self._move_ant_along_wall(ant)
+            return
+
         ant.update()
+        attempted_heading = ant.heading
         if self._movement_intersects_obstacle(
             previous_position,
             (ant.x, ant.y),
             radius=ant.hitbox_radius,
         ):
             ant.x, ant.y = previous_position
+            ant.heading = previous_heading
+            blocked_count = self._record_blocked_heading(
+                ant,
+                attempted_heading,
+            )
+            if blocked_count >= settings.ANT_AVOID_PHEROMONE_REPEAT_COUNT:
+                self._deposit_avoid_pheromone_for(ant)
+            self._start_wall_following(ant)
+            self._move_ant_around_obstacle(ant, blocked_count)
+
+    def _move_ant_around_obstacle(
+        self,
+        ant: Ant,
+        blocked_count: int = 1,
+    ) -> None:
+        base_heading = self._preferred_heading_for(ant)
+        clear_candidates: list[
+            tuple[tuple[float, ...], float, tuple[float, float]]
+        ] = []
+
+        for heading in self._avoidance_headings(base_heading, blocked_count):
+            candidate = self._candidate_position_for(ant, heading)
+            if self._movement_intersects_obstacle(
+                (ant.x, ant.y),
+                candidate,
+                radius=ant.hitbox_radius,
+            ):
+                continue
+
+            clear_candidates.append(
+                (
+                    self._avoidance_score(
+                        ant,
+                        candidate,
+                        heading,
+                        base_heading,
+                        blocked_count,
+                    ),
+                    heading,
+                    candidate,
+                )
+            )
+
+        if clear_candidates:
+            _, heading, candidate = min(clear_candidates)
+            ant.x, ant.y = candidate
+            ant.heading = heading % 360
+            return
+
+        if self._move_ant_out_of_obstacle_contact(ant):
+            self._start_wall_following(ant)
+        else:
+            ant.heading = (base_heading + 180) % 360
+
+    def _is_wall_following(
+        self,
+        ant: Ant,
+    ) -> bool:
+        return ant.id in self._wall_follow_sides and self._has_navigation_target(ant)
+
+    def _start_wall_following(
+        self,
+        ant: Ant,
+    ) -> None:
+        if not self._has_navigation_target(ant):
+            return
+
+        base_heading = self._preferred_heading_for(ant)
+        left_score = self._wall_follow_side_score(ant, base_heading, -1)
+        right_score = self._wall_follow_side_score(ant, base_heading, 1)
+        self._wall_follow_sides[ant.id] = -1 if left_score <= right_score else 1
+        self._wall_follow_progress[ant.id] = (
+            self._target_distance_for(ant, (ant.x, ant.y)),
+            0,
+        )
+
+    def _stop_wall_following(
+        self,
+        ant: Ant,
+    ) -> None:
+        self._wall_follow_sides.pop(ant.id, None)
+        self._wall_follow_progress.pop(ant.id, None)
+
+    @staticmethod
+    def _has_navigation_target(
+        ant: Ant,
+    ) -> bool:
+        return (
+            ant.state == AntState.SEEKING_FOOD
+            and ant.food_target is not None
+        ) or (
+            ant.state == AntState.CARRYING_FOOD
+            and ant.nest_target is not None
+        )
+
+    def _wall_follow_side_score(
+        self,
+        ant: Ant,
+        base_heading: float,
+        side: int,
+    ) -> tuple[int, float, int]:
+        candidate = self._candidate_position_for(
+            ant,
+            base_heading + (90 * side),
+        )
+        blocked = self._movement_intersects_obstacle(
+            (ant.x, ant.y),
+            candidate,
+            radius=ant.hitbox_radius,
+        )
+        return (
+            int(blocked),
+            self._target_distance_for(ant, candidate),
+            0 if side == -1 else 1,
+        )
+
+    def _try_direct_navigation_step(
+        self,
+        ant: Ant,
+    ) -> bool:
+        base_heading = self._preferred_heading_for(ant)
+        candidate = self._candidate_position_for(ant, base_heading)
+        if self._movement_intersects_obstacle(
+            (ant.x, ant.y),
+            candidate,
+            radius=ant.hitbox_radius,
+        ):
+            return False
+
+        ant.x, ant.y = candidate
+        ant.heading = base_heading % 360
+        return True
+
+    def _direct_route_to_target_is_clear(
+        self,
+        ant: Ant,
+    ) -> bool:
+        target = self._target_position_for(ant)
+        if target is None:
+            return False
+
+        return not self._movement_intersects_obstacle(
+            (ant.x, ant.y),
+            target,
+            radius=ant.hitbox_radius,
+        )
+
+    def _move_ant_along_wall(
+        self,
+        ant: Ant,
+    ) -> None:
+        base_heading = self._preferred_heading_for(ant)
+        side = self._wall_follow_sides.get(ant.id, -1)
+        if (
+            self._wall_follow_is_stalled(ant)
+            and self._try_boundary_recovery_step(ant, base_heading)
+        ):
+            self._start_wall_following(ant)
+            return
+
+        headings = tuple(
+            (base_heading + offset * side) % 360
+            for offset in (90, 60, 120, 45, 135)
+        ) + tuple(
+            (base_heading - offset * side) % 360
+            for offset in (90, 135)
+        ) + ((base_heading + 180) % 360,)
+
+        clear_candidates: list[
+            tuple[tuple[float, ...], float, tuple[float, float]]
+        ] = []
+        for heading in headings:
+            candidate = self._candidate_position_for(ant, heading)
+            if self._movement_intersects_obstacle(
+                (ant.x, ant.y),
+                candidate,
+                radius=ant.hitbox_radius,
+            ):
+                continue
+
+            clear_candidates.append(
+                (
+                    (
+                        self._boundary_contact_penalty(ant, candidate),
+                        self._avoid_pheromone_penalty(ant, candidate),
+                        self._blocked_heading_penalty(ant, heading),
+                        self._heading_delta(
+                            heading,
+                            (base_heading + 90 * side) % 360,
+                        ),
+                        self._target_distance_for(ant, candidate),
+                    ),
+                    heading,
+                    candidate,
+                )
+            )
+
+        if clear_candidates:
+            _, heading, candidate = min(clear_candidates)
+            ant.x, ant.y = candidate
+            ant.heading = heading % 360
+            return
+
+        self._wall_follow_sides[ant.id] = -side
+        if self._move_ant_out_of_obstacle_contact(ant):
+            self._start_wall_following(ant)
+        else:
+            ant.heading = (base_heading + 180) % 360
+
+    def _wall_follow_is_stalled(
+        self,
+        ant: Ant,
+    ) -> bool:
+        current_distance = self._target_distance_for(ant, (ant.x, ant.y))
+        best_distance, stale_ticks = self._wall_follow_progress.get(
+            ant.id,
+            (current_distance, 0),
+        )
+
+        if current_distance < best_distance - 0.5:
+            self._wall_follow_progress[ant.id] = (current_distance, 0)
+            return False
+
+        stale_ticks += 1
+        self._wall_follow_progress[ant.id] = (best_distance, stale_ticks)
+        return stale_ticks >= settings.ANT_WALL_FOLLOW_STALL_TICKS
+
+    def _try_boundary_recovery_step(
+        self,
+        ant: Ant,
+        base_heading: float,
+    ) -> bool:
+        if self._world_boundary_clearance(ant.x, ant.y) > ant.speed:
+            return False
+
+        candidates: list[tuple[tuple[float, ...], float, tuple[float, float]]] = []
+        for heading in self._escape_headings(base_heading):
+            candidate = self._candidate_position_for(ant, heading)
+            if self._movement_intersects_obstacle(
+                (ant.x, ant.y),
+                candidate,
+                radius=ant.hitbox_radius,
+            ):
+                continue
+
+            candidates.append(
+                (
+                    (
+                        -self._world_boundary_clearance(
+                            candidate[0],
+                            candidate[1],
+                        ),
+                        self._target_distance_for(ant, candidate),
+                        self._heading_delta(heading, base_heading),
+                    ),
+                    heading,
+                    candidate,
+                )
+            )
+
+        if not candidates:
+            return False
+
+        _, heading, candidate = min(candidates)
+        ant.x, ant.y = candidate
+        ant.heading = heading % 360
+        return True
+
+    def _move_ant_out_of_obstacle_contact(
+        self,
+        ant: Ant,
+    ) -> bool:
+        base_heading = self._preferred_heading_for(ant)
+        candidates: list[tuple[tuple[float, ...], float, tuple[float, float]]] = []
+
+        for heading in self._escape_headings(base_heading):
+            for step_count in range(
+                1,
+                settings.ANT_OBSTACLE_ESCAPE_MAX_STEPS + 1,
+            ):
+                candidate = self._candidate_position_for(
+                    ant,
+                    heading,
+                    distance=ant.speed * step_count,
+                )
+                if self._position_is_blocked(
+                    candidate[0],
+                    candidate[1],
+                    radius=ant.hitbox_radius,
+                ):
+                    continue
+
+                candidates.append(
+                    (
+                        (
+                            step_count,
+                            self._target_distance_for(ant, candidate),
+                            self._heading_delta(heading, base_heading),
+                        ),
+                        heading,
+                        candidate,
+                    )
+                )
+                break
+
+        if not candidates:
+            self._wall_follow_sides[ant.id] = (
+                -self._wall_follow_sides.get(ant.id, -1)
+            )
+            return False
+
+        _, heading, candidate = min(candidates)
+        ant.x, ant.y = candidate
+        ant.heading = heading % 360
+        return True
+
+    def _avoidance_score(
+        self,
+        ant: Ant,
+        candidate: tuple[float, float],
+        heading: float,
+        base_heading: float,
+        blocked_count: int = 1,
+    ) -> tuple[float, ...]:
+        blocked_penalty = self._blocked_heading_penalty(ant, heading)
+        avoid_penalty = self._avoid_pheromone_penalty(ant, candidate)
+        boundary_penalty = self._boundary_contact_penalty(ant, candidate)
+        recovery_penalty = 0
+        if blocked_count >= settings.ANT_AVOID_PHEROMONE_REPEAT_COUNT:
+            recovery_heading = (base_heading + 180) % 360
+            recovery_penalty = self._heading_delta(heading, recovery_heading)
+
+        pheromone_distance = self._route_pheromone_distance(
+            ant,
+            candidate,
+        )
+        if pheromone_distance is not None:
+            return (
+                boundary_penalty,
+                blocked_penalty,
+                avoid_penalty,
+                recovery_penalty,
+                0,
+                pheromone_distance,
+                self._heading_delta(heading, base_heading),
+            )
+
+        target_distance = self._target_distance_for(
+            ant,
+            candidate,
+        )
+        return (
+            boundary_penalty,
+            blocked_penalty,
+            avoid_penalty,
+            recovery_penalty,
+            1,
+            target_distance,
+            self._heading_delta(heading, base_heading),
+        )
+
+    @staticmethod
+    def _world_boundary_clearance(
+        x: float,
+        y: float,
+    ) -> float:
+        padding = settings.ANT_BOUNDARY_PADDING
+        return min(
+            x - padding,
+            settings.WORLD_WIDTH - padding - x,
+            y - padding,
+            settings.WORLD_HEIGHT - padding - y,
+        )
+
+    def _boundary_contact_penalty(
+        self,
+        ant: Ant,
+        candidate: tuple[float, float],
+    ) -> int:
+        current_clearance = self._world_boundary_clearance(ant.x, ant.y)
+        if current_clearance > ant.speed:
+            return 0
+
+        candidate_clearance = self._world_boundary_clearance(
+            candidate[0],
+            candidate[1],
+        )
+        minimum_escape_clearance = current_clearance + 1
+        return int(candidate_clearance < minimum_escape_clearance)
+
+    def _route_pheromone_distance(
+        self,
+        ant: Ant,
+        candidate: tuple[float, float],
+    ) -> float | None:
+        source_ids = self._route_pheromone_source_ids(ant)
+        if not source_ids:
+            return None
+
+        matching_pheromones = tuple(
+            pheromone
+            for pheromone in self.pheromones
+            if pheromone.pheromone_type == PheromoneType.FOOD
+            and pheromone.source_food_id in source_ids
+            and ant.senses.can_detect(ant, pheromone)
+            and self._pheromone_supports_current_route(ant, pheromone)
+        )
+
+        if not matching_pheromones:
+            return None
+
+        return min(
+            math.hypot(
+                candidate[0] - pheromone.x,
+                candidate[1] - pheromone.y,
+            )
+            for pheromone in matching_pheromones
+        )
+
+    @staticmethod
+    def _route_pheromone_source_ids(
+        ant: Ant,
+    ) -> tuple[int | str, ...]:
+        if ant.state == AntState.SEEKING_FOOD and ant.food_target is not None:
+            return (ant.food_target.id,)
+
+        if ant.state == AntState.CARRYING_FOOD:
+            return tuple(
+                portion.source_id
+                for portion in ant.inventory
+            )
+
+        return ()
+
+    def _pheromone_supports_current_route(
+        self,
+        ant: Ant,
+        pheromone: Pheromone,
+    ) -> bool:
+        if ant.state != AntState.CARRYING_FOOD:
+            return True
+
+        if ant.nest_target is None:
+            return False
+
+        current_nest_distance = math.hypot(
+            ant.nest_target.x - ant.x,
+            ant.nest_target.y - ant.y,
+        )
+        pheromone_nest_distance = math.hypot(
+            ant.nest_target.x - pheromone.x,
+            ant.nest_target.y - pheromone.y,
+        )
+        return pheromone_nest_distance < current_nest_distance
+
+    def _target_distance_for(
+        self,
+        ant: Ant,
+        candidate: tuple[float, float],
+    ) -> float:
+        target = self._target_position_for(ant)
+
+        if target is None:
+            return 0
+
+        return math.hypot(
+            target[0] - candidate[0],
+            target[1] - candidate[1],
+        )
+
+    @staticmethod
+    def _target_position_for(
+        ant: Ant,
+    ) -> tuple[float, float] | None:
+        if ant.state == AntState.SEEKING_FOOD and ant.food_target is not None:
+            return (ant.food_target.x, ant.food_target.y)
+        if ant.state == AntState.CARRYING_FOOD and ant.nest_target is not None:
+            return (ant.nest_target.x, ant.nest_target.y)
+        return None
+
+    @staticmethod
+    def _heading_delta(
+        heading: float,
+        base_heading: float,
+    ) -> float:
+        return abs((heading - base_heading + 180) % 360 - 180)
+
+    def _preferred_heading_for(
+        self,
+        ant: Ant,
+    ) -> float:
+        target: tuple[float, float] | None = None
+        target = self._target_position_for(ant)
+
+        if target is None:
+            return ant.heading
+
+        return math.degrees(
+            math.atan2(
+                target[1] - ant.y,
+                target[0] - ant.x,
+            )
+        )
+
+    @staticmethod
+    def _avoidance_headings(
+        base_heading: float,
+        blocked_count: int = 1,
+    ) -> tuple[float, ...]:
+        if blocked_count >= settings.ANT_AVOID_PHEROMONE_REPEAT_COUNT:
+            return tuple(
+                (base_heading + offset) % 360
+                for offset in (
+                    180,
+                    135,
+                    -135,
+                    90,
+                    -90,
+                    45,
+                    -45,
+                )
+            )
+
+        return tuple(
+            (base_heading + offset) % 360
+            for offset in (
+                45,
+                -45,
+                90,
+                -90,
+                135,
+                -135,
+                180,
+            )
+        )
+
+    @staticmethod
+    def _escape_headings(
+        base_heading: float,
+    ) -> tuple[float, ...]:
+        return tuple(
+            (base_heading + offset) % 360
+            for offset in (
+                0,
+                45,
+                -45,
+                90,
+                -90,
+                135,
+                -135,
+                180,
+            )
+        )
+
+    def _record_blocked_heading(
+        self,
+        ant: Ant,
+        heading: float,
+    ) -> int:
+        recent_headings = self._blocked_headings.setdefault(ant.id, [])
+        recent_headings.append(
+            (
+                heading % 360,
+                settings.ANT_BLOCKED_HEADING_MEMORY_TICKS,
+            )
+        )
+        return sum(
+            1
+            for blocked_heading, _ in recent_headings
+            if self._heading_delta(blocked_heading, heading)
+            <= settings.ANT_BLOCKED_HEADING_MATCH_DEGREES
+        )
+
+    def _decay_blocked_headings_for(
+        self,
+        ant: Ant,
+    ) -> None:
+        recent_headings = self._blocked_headings.get(ant.id)
+        if not recent_headings:
+            return
+
+        remaining = tuple(
+            (heading, ticks - 1)
+            for heading, ticks in recent_headings
+            if ticks > 1
+        )
+
+        if remaining:
+            self._blocked_headings[ant.id] = list(remaining)
+        else:
+            del self._blocked_headings[ant.id]
+
+    def _blocked_heading_penalty(
+        self,
+        ant: Ant,
+        heading: float,
+    ) -> int:
+        return sum(
+            1
+            for blocked_heading, _ in self._blocked_headings.get(ant.id, ())
+            if self._heading_delta(blocked_heading, heading)
+            <= settings.ANT_BLOCKED_HEADING_MATCH_DEGREES
+        )
+
+    def _avoid_pheromone_penalty(
+        self,
+        ant: Ant,
+        candidate: tuple[float, float],
+    ) -> float:
+        penalties = tuple(
+            pheromone.strength
+            for pheromone in self.pheromones
+            if pheromone.pheromone_type == PheromoneType.AVOID
+            and ant.senses.can_detect(ant, pheromone)
+            and math.hypot(
+                candidate[0] - pheromone.x,
+                candidate[1] - pheromone.y,
+            )
+            <= settings.PHEROMONE_DISCOVERABLE_RADIUS
+        )
+        return sum(penalties)
+
+    def _deposit_avoid_pheromone_for(
+        self,
+        ant: Ant,
+    ) -> None:
+        self.add_entity(
+            Pheromone(
+                pheromone_id=self._next_pheromone_id,
+                pheromone_type=PheromoneType.AVOID,
+                strength=settings.AVOID_PHEROMONE_INITIAL_STRENGTH,
+                x=ant.x,
+                y=ant.y,
+            )
+        )
+        self._next_pheromone_id += 1
+
+    @staticmethod
+    def _candidate_position_for(
+        ant: Ant,
+        heading: float,
+        distance: float | None = None,
+    ) -> tuple[float, float]:
+        heading_radians = math.radians(heading)
+        step_distance = ant.speed if distance is None else distance
+        x = ant.x + math.cos(heading_radians) * step_distance
+        y = ant.y + math.sin(heading_radians) * step_distance
+        padding = settings.ANT_BOUNDARY_PADDING
+        return (
+            min(max(x, padding), settings.WORLD_WIDTH - padding),
+            min(max(y, padding), settings.WORLD_HEIGHT - padding),
+        )
 
     def _process_upkeep(self) -> None:
         """Refuel ants physically at the nest in ascending ID order.
@@ -669,10 +1380,6 @@ class World:
 
             if ant.food_target is resource:
                 ant.clear_food_target()
-
-        for pheromone in self.pheromones:
-            if pheromone.source_food_id == resource.id:
-                self.remove_entity(pheromone)
 
     def __iter__(self) -> Iterator[Entity]:
         return iter(self._entities)

@@ -20,6 +20,7 @@ dev = [
 
 [project.scripts]
 ant-colony = "ant_colony.main:main"
+ant-colony-obstacle-test = "ant_colony.obstacle_test:main_obstacle_test"
 
 [tool.setuptools.packages.find]
 include = ["ant_colony*"]

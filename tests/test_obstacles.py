@@ -99,6 +99,55 @@ def test_blocked_targeted_ant_enters_wall_follow_recovery() -> None:
     assert ant.food_target is food
 
 
+def test_seeking_ant_escapes_obstacle_corner_contact() -> None:
+    world = World(scenario="navigation_test_arena")
+    ant = world.ants[0]
+    food = world.food[0]
+    ant.x = 530
+    ant.y = 330
+    ant.speed = 5
+    food.x = 780
+    food.y = 350
+    ant.select_food_target(food)
+
+    world._update_ant_movement(ant)
+
+    assert ant.x > 530
+    assert not world._position_is_blocked(
+        ant.x,
+        ant.y,
+        radius=ant.hitbox_radius,
+    )
+    assert ant.food_target is food
+
+
+def test_returning_ant_escapes_obstacle_corner_contact() -> None:
+    world = World(scenario="navigation_test_arena")
+    ant = world.ants[0]
+    food = world.food[0]
+    ant.x = 530
+    ant.y = 330
+    ant.speed = 5
+    ant.inventory.add(
+        ResourcePortion(
+            source_id=food.id,
+            resource_type=ResourceType.FOOD,
+            value=1,
+        )
+    )
+    ant.select_nest_target(world.nest)
+
+    world._update_ant_movement(ant)
+
+    assert (ant.x, ant.y) != (530, 330)
+    assert not world._position_is_blocked(
+        ant.x,
+        ant.y,
+        radius=ant.hitbox_radius,
+    )
+    assert ant.nest_target is world.nest
+
+
 def test_first_return_trip_reaches_nest_without_pheromone_help() -> None:
     world = World(scenario="navigation_test_arena")
     ant = world.ants[0]

@@ -234,6 +234,7 @@ def test_world_coordinates_ant_sensing() -> None:
         100,
         100,
     )
+    assert food.is_discovered
 
 
 def test_world_sensing_excludes_distant_entity() -> None:

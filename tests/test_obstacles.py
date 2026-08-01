@@ -52,6 +52,29 @@ def test_ant_movement_does_not_cross_obstacle() -> None:
     assert ant.y == 370
 
 
+def test_blocked_ant_tries_clear_alternate_heading() -> None:
+    world = World(scenario="navigation_test_arena")
+    ant = world.ants[0]
+    food = world.food[0]
+    ant.x = 460
+    ant.y = 370
+    ant.speed = 10
+    food.x = 780
+    food.y = 370
+    ant.select_food_target(food)
+
+    world._update_ant_movement(ant)
+
+    assert ant.x > 460
+    assert ant.y != 370
+    assert not world._position_is_blocked(
+        ant.x,
+        ant.y,
+        radius=ant.hitbox_radius,
+    )
+    assert ant.food_target is food
+
+
 def test_spawn_rejects_blocked_nest_position() -> None:
     scenario = Scenario(
         name="blocked_nest",

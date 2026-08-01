@@ -7,6 +7,7 @@ from ant_colony.config import settings
 from ant_colony.entities.pheromone import PheromoneType
 from ant_colony.geometry import RectangleObstacle
 from ant_colony.scenarios import (
+    MAZE_PHEROMONE_ARENA,
     NAVIGATION_TEST_ARENA,
     ROUTE_REASSESSMENT_ARENA,
     Scenario,
@@ -636,3 +637,59 @@ def test_ant_reaches_food_through_alternate_route_after_short_route_closes() -> 
         ant.y,
         radius=ant.hitbox_radius,
     )
+
+
+def test_maze_pheromone_arena_blocks_direct_route_with_snake_openings() -> None:
+    world = World(scenario=MAZE_PHEROMONE_ARENA)
+
+    assert world.scenario_name == settings.MAZE_PHEROMONE_ARENA_NAME
+    assert world.max_ants == settings.MAZE_PHEROMONE_ARENA_MAX_ANTS
+    assert len(world.obstacles) == 6
+    assert world.nest.x < settings.WORLD_WIDTH / 2
+    assert all(food.x > settings.WORLD_WIDTH / 2 for food in world.food)
+
+    assert world._position_is_blocked(315, 100)
+    assert world._position_is_blocked(515, 420)
+    assert world._position_is_blocked(715, 200)
+
+    assert not world._position_is_blocked(315, 350)
+    assert not world._position_is_blocked(515, 240)
+    assert not world._position_is_blocked(715, 430)
+
+
+def test_maze_pheromone_arena_caps_total_ants_without_completion() -> None:
+    world = World(scenario=MAZE_PHEROMONE_ARENA)
+    world.nest.deposit(
+        (
+            ResourcePortion(
+                source_id=1,
+                resource_type=ResourceType.FOOD,
+                value=settings.ANT_SPAWN_FOOD_COST * 20,
+            ),
+        )
+    )
+
+    for _ in range(settings.MAZE_PHEROMONE_ARENA_MAX_ANTS + 3):
+        world._maybe_spawn_ant()
+
+    assert len(world.ants) == settings.MAZE_PHEROMONE_ARENA_MAX_ANTS
+    assert not world.is_complete
+
+
+def test_maze_pheromone_arena_completes_food_loop_with_five_ant_cap() -> None:
+    world = World(rng=random.Random(1), scenario=MAZE_PHEROMONE_ARENA)
+    first_deposit_tick = None
+
+    for tick in range(1, 2500):
+        reserve_before = world.nest.food_reserve
+        world.update()
+        if (
+            first_deposit_tick is None
+            and world.nest.food_reserve > reserve_before
+        ):
+            first_deposit_tick = tick
+
+    assert first_deposit_tick is not None
+    assert len(world.ants) == settings.MAZE_PHEROMONE_ARENA_MAX_ANTS
+    assert len(world.pheromones) > 0
+    assert not world.is_complete

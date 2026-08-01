@@ -2,7 +2,7 @@ import random
 
 import pytest
 
-from ant_colony.components import ResourcePortion, ResourceType
+from ant_colony.components import AntState, ResourcePortion, ResourceType
 from ant_colony.config import settings
 from ant_colony.entities.pheromone import PheromoneType
 from ant_colony.geometry import RectangleObstacle
@@ -571,17 +571,33 @@ def test_route_reassessment_arena_starts_with_short_route_open() -> None:
     assert not world._position_is_blocked(500, 520)
 
 
-def test_route_reassessment_arena_closes_short_route_on_schedule() -> None:
+def _begin_food_return_through_short_route(world: World) -> None:
+    ant = world.ants[0]
+    food = world.food[0]
+    ant.x = food.x
+    ant.y = food.y
+    ant.inventory.clear()
+    ant.state = AntState.WANDERING
+    ant.select_food_target(food)
+
+    world._collect_food_for(ant)
+
+
+def test_route_reassessment_arena_closes_short_route_on_third_return() -> None:
     world = World(scenario=ROUTE_REASSESSMENT_ARENA)
 
-    for _ in range(settings.ROUTE_REASSESSMENT_ARENA_BLOCKER_ACTIVATION_TICK):
-        world.update()
+    for _ in range(
+        settings.ROUTE_REASSESSMENT_ARENA_BLOCKER_ACTIVATION_TRIP_COUNT - 1
+    ):
+        _begin_food_return_through_short_route(world)
 
     assert not world.route_blockers_active
+    assert world.route_blocker_trip_count == 2
 
-    world.update()
+    _begin_food_return_through_short_route(world)
 
     assert world.route_blockers_active
+    assert world.route_blocker_trip_count == 3
     assert len(world.obstacles) == (
         len(ROUTE_REASSESSMENT_ARENA.obstacles)
         + len(ROUTE_REASSESSMENT_ARENA.route_blockers)

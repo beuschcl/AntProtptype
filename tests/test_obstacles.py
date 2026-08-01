@@ -1,4 +1,6 @@
+import math
 import random
+from collections import deque
 
 import pytest
 
@@ -30,6 +32,26 @@ def test_rectangle_obstacle_intersection_is_deterministic() -> None:
     assert not obstacle.intersects_circle(10, 10, 2)
     assert obstacle.intersects_segment((0, 115), (200, 115))
     assert not obstacle.intersects_segment((0, 10), (20, 10))
+
+
+def test_ant_radius_tangent_wall_contact_is_traversable() -> None:
+    world = World(scenario=MAZE_PHEROMONE_ARENA)
+
+    assert not world._position_is_blocked(
+        540,
+        350,
+        radius=settings.ANT_RADIUS,
+    )
+    assert not world._movement_intersects_obstacle(
+        (540, 350),
+        (650, 350),
+        radius=settings.ANT_RADIUS,
+    )
+    assert world._position_is_blocked(
+        540,
+        350 + settings.COLLISION_TANGENT_EPSILON * 2,
+        radius=settings.ANT_RADIUS,
+    )
 
 
 def test_default_scenario_has_no_obstacles_and_updates() -> None:
@@ -64,7 +86,7 @@ def test_blocked_ant_tries_clear_alternate_heading() -> None:
     world = World(scenario="navigation_test_arena")
     ant = world.ants[0]
     food = world.food[0]
-    ant.x = 460
+    ant.x = 463
     ant.y = 370
     ant.speed = 10
     food.x = 780
@@ -73,7 +95,7 @@ def test_blocked_ant_tries_clear_alternate_heading() -> None:
 
     world._update_ant_movement(ant)
 
-    assert ant.x > 460
+    assert (ant.x, ant.y) != (463, 370)
     assert ant.y != 370
     assert not world._position_is_blocked(
         ant.x,
@@ -87,7 +109,7 @@ def test_blocked_targeted_ant_enters_wall_follow_recovery() -> None:
     world = World(scenario="navigation_test_arena")
     ant = world.ants[0]
     food = world.food[0]
-    ant.x = 460
+    ant.x = 463
     ant.y = 370
     ant.speed = 10
     food.x = 780
@@ -496,7 +518,7 @@ def test_repeated_blocked_ant_prefers_backing_up_to_wall_sliding() -> None:
     assert not world._position_is_blocked(
         ant.x,
         ant.y,
-        radius=settings.ANT_RADIUS,
+        radius=ant.hitbox_radius,
     )
 
 
@@ -710,3 +732,67 @@ def test_maze_pheromone_arena_completes_food_loop_under_five_ant_cap() -> None:
     assert len(world.ants) <= settings.MAZE_PHEROMONE_ARENA_MAX_ANTS
     assert len(world.pheromones) > 0
     assert not world.is_complete
+
+
+def test_maze_pheromone_arena_targeted_ants_do_not_stall_on_wall_edges() -> None:
+    world = World(rng=random.Random(7), scenario=MAZE_PHEROMONE_ARENA)
+    histories: dict[int, deque[tuple[float, float, float]]] = {}
+    target_keys: dict[int, tuple[str, int | None]] = {}
+
+    for _ in range(3000):
+        world.update()
+
+        for ant in world.ants:
+            if ant.state not in (AntState.SEEKING_FOOD, AntState.CARRYING_FOOD):
+                histories.pop(ant.id, None)
+                target_keys.pop(ant.id, None)
+                continue
+
+            target_key = (
+                ant.state.value,
+                ant.food_target.id if ant.food_target is not None else None,
+            )
+            if ant.state == AntState.CARRYING_FOOD:
+                target_key = (
+                    ant.state.value,
+                    ant.nest_target.id if ant.nest_target is not None else None,
+                )
+            if target_keys.get(ant.id) != target_key:
+                histories.pop(ant.id, None)
+                target_keys[ant.id] = target_key
+
+            history = histories.setdefault(ant.id, deque(maxlen=180))
+            history.append(
+                (
+                    ant.x,
+                    ant.y,
+                    world._target_distance_for(ant, (ant.x, ant.y)),
+                )
+            )
+
+            if len(history) < 180:
+                continue
+
+            displacement = math.hypot(
+                history[-1][0] - history[0][0],
+                history[-1][1] - history[0][1],
+            )
+            best_distance = min(entry[2] for entry in history)
+            current_distance = history[-1][2]
+            near_wall = any(
+                obstacle.intersects_circle(
+                    ant.x,
+                    ant.y,
+                    settings.ANT_RADIUS + 5,
+                )
+                for obstacle in world.obstacles
+            )
+
+            assert not (
+                near_wall
+                and displacement < 8
+                and current_distance > best_distance - 2
+            ), (
+                "targeted ant stalled near a maze wall at "
+                f"({ant.x:.1f}, {ant.y:.1f})"
+            )

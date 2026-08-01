@@ -13,7 +13,7 @@ from ant_colony.entities.ant import Ant
 from ant_colony.entities.entity import Entity
 from ant_colony.entities.food import Food
 from ant_colony.entities.nest import Nest
-from ant_colony.entities.pheromone import Pheromone
+from ant_colony.entities.pheromone import Pheromone, PheromoneType
 from ant_colony.entities.resource import Resource
 from ant_colony.geometry import RectangleObstacle
 from ant_colony.knowledge import EntityObservation
@@ -51,6 +51,7 @@ class World:
         self._update_count = 0
         self._colony_complete = False
         self._rng = rng if rng is not None else _random_module.Random()
+        self._blocked_headings: dict[int, list[tuple[float, int]]] = {}
 
         nest_x, nest_y = self._scenario.nest_position
         self._require_spawn_position_available(
@@ -313,6 +314,9 @@ class World:
             if not isinstance(entity, Pheromone):
                 continue
 
+            if entity.pheromone_type != PheromoneType.FOOD:
+                continue
+
             source_food = food_by_id.get(entity.source_food_id)
 
             if source_food is None:
@@ -414,35 +418,61 @@ class World:
             return
 
         for ant in self.ants:
-            if ant.state != AntState.CARRYING_FOOD:
-                continue
+            self._deposit_pheromone_for_ant(ant)
 
-            if ant.inventory.is_empty:
-                continue
+    def _deposit_pheromone_for_ant(
+        self,
+        ant: Ant,
+    ) -> None:
+        pheromone_type = self._pheromone_type_for(ant)
+        source_food_id = self._pheromone_source_food_id_for(ant)
 
-            carried_food_portion = next(
-                (
-                    portion
-                    for portion in ant.inventory.items
-                    if portion.resource_type == ResourceType.FOOD
-                    and isinstance(portion.source_id, int)
-                ),
-                None,
+        if pheromone_type == PheromoneType.FOOD and source_food_id is None:
+            return
+
+        self.add_entity(
+            Pheromone(
+                pheromone_id=self._next_pheromone_id,
+                source_food_id=source_food_id,
+                pheromone_type=pheromone_type,
+                x=ant.x,
+                y=ant.y,
             )
+        )
+        self._next_pheromone_id += 1
 
-            if carried_food_portion is None:
-                continue
+    @staticmethod
+    def _pheromone_type_for(
+        ant: Ant,
+    ) -> PheromoneType:
+        if ant.state in (AntState.SEEKING_FOOD, AntState.CARRYING_FOOD):
+            return PheromoneType.FOOD
+        return PheromoneType.EXPLORE
 
-            self.add_entity(
-                Pheromone(
-                    pheromone_id=self._next_pheromone_id,
-                    source_food_id=carried_food_portion.source_id,
-                    x=ant.x,
-                    y=ant.y,
-                )
-            )
+    @staticmethod
+    def _pheromone_source_food_id_for(
+        ant: Ant,
+    ) -> int | None:
+        if ant.state == AntState.SEEKING_FOOD and ant.food_target is not None:
+            return ant.food_target.id
 
-            self._next_pheromone_id += 1
+        if ant.state != AntState.CARRYING_FOOD:
+            return None
+
+        carried_food_portion = next(
+            (
+                portion
+                for portion in ant.inventory.items
+                if portion.resource_type == ResourceType.FOOD
+                and isinstance(portion.source_id, int)
+            ),
+            None,
+        )
+
+        if carried_food_portion is None:
+            return None
+
+        return carried_food_portion.source_id
 
     def _update_ant_movement(self, ant: Ant) -> None:
         """Move an ant for one tick, gating wandering departure on nest proximity.
@@ -461,9 +491,11 @@ class World:
             if not ant.depart():
                 return
 
+        self._decay_blocked_headings_for(ant)
         previous_position = (ant.x, ant.y)
         previous_heading = ant.heading
         ant.update()
+        attempted_heading = ant.heading
         if self._movement_intersects_obstacle(
             previous_position,
             (ant.x, ant.y),
@@ -471,18 +503,25 @@ class World:
         ):
             ant.x, ant.y = previous_position
             ant.heading = previous_heading
-            self._move_ant_around_obstacle(ant)
+            blocked_count = self._record_blocked_heading(
+                ant,
+                attempted_heading,
+            )
+            if blocked_count >= settings.ANT_AVOID_PHEROMONE_REPEAT_COUNT:
+                self._deposit_avoid_pheromone_for(ant)
+            self._move_ant_around_obstacle(ant, blocked_count)
 
     def _move_ant_around_obstacle(
         self,
         ant: Ant,
+        blocked_count: int = 1,
     ) -> None:
         base_heading = self._preferred_heading_for(ant)
         clear_candidates: list[
             tuple[tuple[float, ...], float, tuple[float, float]]
         ] = []
 
-        for heading in self._avoidance_headings(base_heading):
+        for heading in self._avoidance_headings(base_heading, blocked_count):
             candidate = self._candidate_position_for(ant, heading)
             if self._movement_intersects_obstacle(
                 (ant.x, ant.y),
@@ -498,6 +537,7 @@ class World:
                         candidate,
                         heading,
                         base_heading,
+                        blocked_count,
                     ),
                     heading,
                     candidate,
@@ -518,13 +558,24 @@ class World:
         candidate: tuple[float, float],
         heading: float,
         base_heading: float,
+        blocked_count: int = 1,
     ) -> tuple[float, ...]:
+        blocked_penalty = self._blocked_heading_penalty(ant, heading)
+        avoid_penalty = self._avoid_pheromone_penalty(ant, candidate)
+        recovery_penalty = 0
+        if blocked_count >= settings.ANT_AVOID_PHEROMONE_REPEAT_COUNT:
+            recovery_heading = (base_heading + 180) % 360
+            recovery_penalty = self._heading_delta(heading, recovery_heading)
+
         pheromone_distance = self._route_pheromone_distance(
             ant,
             candidate,
         )
         if pheromone_distance is not None:
             return (
+                blocked_penalty,
+                avoid_penalty,
+                recovery_penalty,
                 0,
                 pheromone_distance,
                 self._heading_delta(heading, base_heading),
@@ -535,6 +586,9 @@ class World:
             candidate,
         )
         return (
+            blocked_penalty,
+            avoid_penalty,
+            recovery_penalty,
             1,
             target_distance,
             self._heading_delta(heading, base_heading),
@@ -552,7 +606,8 @@ class World:
         matching_pheromones = tuple(
             pheromone
             for pheromone in self.pheromones
-            if pheromone.source_food_id in source_ids
+            if pheromone.pheromone_type == PheromoneType.FOOD
+            and pheromone.source_food_id in source_ids
             and ant.senses.can_detect(ant, pheromone)
             and self._pheromone_supports_current_route(ant, pheromone)
         )
@@ -572,10 +627,7 @@ class World:
     def _route_pheromone_source_ids(
         ant: Ant,
     ) -> tuple[int | str, ...]:
-        if (
-            ant.food_target_source == FoodTargetSource.PHEROMONE
-            and ant.food_target is not None
-        ):
+        if ant.state == AntState.SEEKING_FOOD and ant.food_target is not None:
             return (ant.food_target.id,)
 
         if ant.state == AntState.CARRYING_FOOD:
@@ -656,7 +708,22 @@ class World:
     @staticmethod
     def _avoidance_headings(
         base_heading: float,
+        blocked_count: int = 1,
     ) -> tuple[float, ...]:
+        if blocked_count >= settings.ANT_AVOID_PHEROMONE_REPEAT_COUNT:
+            return tuple(
+                (base_heading + offset) % 360
+                for offset in (
+                    180,
+                    135,
+                    -135,
+                    90,
+                    -90,
+                    45,
+                    -45,
+                )
+            )
+
         return tuple(
             (base_heading + offset) % 360
             for offset in (
@@ -669,6 +736,89 @@ class World:
                 180,
             )
         )
+
+    def _record_blocked_heading(
+        self,
+        ant: Ant,
+        heading: float,
+    ) -> int:
+        recent_headings = self._blocked_headings.setdefault(ant.id, [])
+        recent_headings.append(
+            (
+                heading % 360,
+                settings.ANT_BLOCKED_HEADING_MEMORY_TICKS,
+            )
+        )
+        return sum(
+            1
+            for blocked_heading, _ in recent_headings
+            if self._heading_delta(blocked_heading, heading)
+            <= settings.ANT_BLOCKED_HEADING_MATCH_DEGREES
+        )
+
+    def _decay_blocked_headings_for(
+        self,
+        ant: Ant,
+    ) -> None:
+        recent_headings = self._blocked_headings.get(ant.id)
+        if not recent_headings:
+            return
+
+        remaining = tuple(
+            (heading, ticks - 1)
+            for heading, ticks in recent_headings
+            if ticks > 1
+        )
+
+        if remaining:
+            self._blocked_headings[ant.id] = list(remaining)
+        else:
+            del self._blocked_headings[ant.id]
+
+    def _blocked_heading_penalty(
+        self,
+        ant: Ant,
+        heading: float,
+    ) -> int:
+        return sum(
+            1
+            for blocked_heading, _ in self._blocked_headings.get(ant.id, ())
+            if self._heading_delta(blocked_heading, heading)
+            <= settings.ANT_BLOCKED_HEADING_MATCH_DEGREES
+        )
+
+    def _avoid_pheromone_penalty(
+        self,
+        ant: Ant,
+        candidate: tuple[float, float],
+    ) -> float:
+        penalties = tuple(
+            pheromone.strength
+            for pheromone in self.pheromones
+            if pheromone.pheromone_type == PheromoneType.AVOID
+            and ant.senses.can_detect(ant, pheromone)
+            and math.hypot(
+                candidate[0] - pheromone.x,
+                candidate[1] - pheromone.y,
+            )
+            <= settings.PHEROMONE_DISCOVERABLE_RADIUS
+        )
+        return sum(penalties)
+
+    def _deposit_avoid_pheromone_for(
+        self,
+        ant: Ant,
+    ) -> None:
+        self.add_entity(
+            Pheromone(
+                pheromone_id=self._next_pheromone_id,
+                pheromone_type=PheromoneType.AVOID,
+                strength=settings.AVOID_PHEROMONE_INITIAL_STRENGTH,
+                x=ant.x,
+                y=ant.y,
+            )
+        )
+        self._next_pheromone_id += 1
 
     @staticmethod
     def _candidate_position_for(
@@ -886,7 +1036,10 @@ class World:
                 ant.clear_food_target()
 
         for pheromone in self.pheromones:
-            if pheromone.source_food_id == resource.id:
+            if (
+                pheromone.pheromone_type == PheromoneType.FOOD
+                and pheromone.source_food_id == resource.id
+            ):
                 self.remove_entity(pheromone)
 
     def __iter__(self) -> Iterator[Entity]:

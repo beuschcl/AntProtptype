@@ -748,12 +748,14 @@ class World:
     ) -> None:
         base_heading = self._preferred_heading_for(ant)
         side = self._wall_follow_sides.get(ant.id, -1)
-        if (
-            self._wall_follow_is_stalled(ant)
-            and self._try_boundary_recovery_step(ant, base_heading)
-        ):
-            self._start_wall_following(ant)
-            return
+        stalled = self._wall_follow_is_stalled(ant)
+        if stalled:
+            if self._try_boundary_recovery_step(ant, base_heading):
+                self._start_wall_following(ant)
+                return
+            if self.scenario_name == settings.MAZE_PHEROMONE_ARENA_NAME:
+                side = -side
+                self._wall_follow_sides[ant.id] = side
 
         headings = tuple(
             (base_heading + offset * side) % 360
@@ -777,15 +779,17 @@ class World:
 
             clear_candidates.append(
                 (
-                    (
-                        self._boundary_contact_penalty(ant, candidate),
-                        self._avoid_pheromone_penalty(ant, candidate),
-                        self._blocked_heading_penalty(ant, heading),
-                        self._heading_delta(
-                            heading,
-                            (base_heading + 90 * side) % 360,
+                    self._wall_follow_candidate_score(
+                        ant,
+                        candidate,
+                        heading,
+                        base_heading,
+                        side,
+                        target_first=(
+                            stalled
+                            and self.scenario_name
+                            == settings.MAZE_PHEROMONE_ARENA_NAME
                         ),
-                        self._target_distance_for(ant, candidate),
                     ),
                     heading,
                     candidate,
@@ -803,6 +807,32 @@ class World:
             self._start_wall_following(ant)
         else:
             ant.heading = (base_heading + 180) % 360
+
+    def _wall_follow_candidate_score(
+        self,
+        ant: Ant,
+        candidate: tuple[float, float],
+        heading: float,
+        base_heading: float,
+        side: int,
+        *,
+        target_first: bool,
+    ) -> tuple[float, ...]:
+        common_score = (
+            self._boundary_contact_penalty(ant, candidate),
+            self._avoid_pheromone_penalty(ant, candidate),
+            self._blocked_heading_penalty(ant, heading),
+        )
+        target_distance = self._target_distance_for(ant, candidate)
+        follow_heading_delta = self._heading_delta(
+            heading,
+            (base_heading + 90 * side) % 360,
+        )
+
+        if target_first:
+            return common_score + (target_distance, follow_heading_delta)
+
+        return common_score + (follow_heading_delta, target_distance)
 
     def _wall_follow_is_stalled(
         self,

@@ -144,6 +144,10 @@ class World:
         """True once the colony has reached ``MAX_ANTS`` for the first time."""
         return self._colony_complete
 
+    @property
+    def max_ants(self) -> int:
+        return self._scenario.max_ants or settings.MAX_ANTS
+
     def add_entity(
         self,
         entity: Entity,
@@ -198,9 +202,12 @@ class World:
             )
 
         discovered_entities = (
-            ant.senses.detect(
-                observer=ant,
-                candidates=self.entities,
+            self._visible_entities_for(
+                ant,
+                ant.senses.detect(
+                    observer=ant,
+                    candidates=self.entities,
+                ),
             )
         )
 
@@ -210,6 +217,30 @@ class World:
                 entity.mark_discovered()
 
         return discovered_entities
+
+    def _visible_entities_for(
+        self,
+        observer: Ant,
+        candidates: tuple[Entity, ...],
+    ) -> tuple[Entity, ...]:
+        return tuple(
+            candidate
+            for candidate in candidates
+            if not self._entity_is_occluded(observer, candidate)
+        )
+
+    def _entity_is_occluded(
+        self,
+        observer: Ant,
+        target: Entity,
+    ) -> bool:
+        if not isinstance(target, Food):
+            return False
+
+        return self._movement_intersects_obstacle(
+            (observer.x, observer.y),
+            (target.x, target.y),
+        )
 
     def update(self) -> None:
         if self._colony_complete:
@@ -744,12 +775,14 @@ class World:
     ) -> None:
         base_heading = self._preferred_heading_for(ant)
         side = self._wall_follow_sides.get(ant.id, -1)
-        if (
-            self._wall_follow_is_stalled(ant)
-            and self._try_boundary_recovery_step(ant, base_heading)
-        ):
-            self._start_wall_following(ant)
-            return
+        stalled = self._wall_follow_is_stalled(ant)
+        if stalled:
+            if self._try_boundary_recovery_step(ant, base_heading):
+                self._start_wall_following(ant)
+                return
+            if self.scenario_name == settings.MAZE_PHEROMONE_ARENA_NAME:
+                side = -side
+                self._wall_follow_sides[ant.id] = side
 
         headings = tuple(
             (base_heading + offset * side) % 360
@@ -773,15 +806,17 @@ class World:
 
             clear_candidates.append(
                 (
-                    (
-                        self._boundary_contact_penalty(ant, candidate),
-                        self._avoid_pheromone_penalty(ant, candidate),
-                        self._blocked_heading_penalty(ant, heading),
-                        self._heading_delta(
-                            heading,
-                            (base_heading + 90 * side) % 360,
+                    self._wall_follow_candidate_score(
+                        ant,
+                        candidate,
+                        heading,
+                        base_heading,
+                        side,
+                        target_first=(
+                            stalled
+                            and self.scenario_name
+                            == settings.MAZE_PHEROMONE_ARENA_NAME
                         ),
-                        self._target_distance_for(ant, candidate),
                     ),
                     heading,
                     candidate,
@@ -799,6 +834,32 @@ class World:
             self._start_wall_following(ant)
         else:
             ant.heading = (base_heading + 180) % 360
+
+    def _wall_follow_candidate_score(
+        self,
+        ant: Ant,
+        candidate: tuple[float, float],
+        heading: float,
+        base_heading: float,
+        side: int,
+        *,
+        target_first: bool,
+    ) -> tuple[float, ...]:
+        common_score = (
+            self._boundary_contact_penalty(ant, candidate),
+            self._avoid_pheromone_penalty(ant, candidate),
+            self._blocked_heading_penalty(ant, heading),
+        )
+        target_distance = self._target_distance_for(ant, candidate)
+        follow_heading_delta = self._heading_delta(
+            heading,
+            (base_heading + 90 * side) % 360,
+        )
+
+        if target_first:
+            return common_score + (target_distance, follow_heading_delta)
+
+        return common_score + (follow_heading_delta, target_distance)
 
     def _wall_follow_is_stalled(
         self,
@@ -1267,7 +1328,7 @@ class World:
                 ant.energy.restore(settings.ANT_REFUEL_ENERGY_AMOUNT)
 
     def _maybe_spawn_ant(self) -> None:
-        if len(self.ants) >= settings.MAX_ANTS:
+        if len(self.ants) >= self.max_ants:
             return
 
         nest = self.nest
@@ -1369,11 +1430,12 @@ class World:
         *,
         radius: float = 0.0,
     ) -> bool:
+        padding = max(0.0, radius - settings.COLLISION_TANGENT_EPSILON)
         return any(
             obstacle.intersects_segment(
                 start,
                 end,
-                padding=radius,
+                padding=padding,
             )
             for obstacle in self.obstacles
         )
@@ -1385,11 +1447,15 @@ class World:
         *,
         radius: float = 0.0,
     ) -> bool:
+        collision_radius = max(
+            0.0,
+            radius - settings.COLLISION_TANGENT_EPSILON,
+        )
         return any(
             obstacle.intersects_circle(
                 x,
                 y,
-                radius,
+                collision_radius,
             )
             for obstacle in self.obstacles
         )

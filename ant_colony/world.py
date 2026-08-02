@@ -202,9 +202,12 @@ class World:
             )
 
         discovered_entities = (
-            ant.senses.detect(
-                observer=ant,
-                candidates=self.entities,
+            self._visible_entities_for(
+                ant,
+                ant.senses.detect(
+                    observer=ant,
+                    candidates=self.entities,
+                ),
             )
         )
 
@@ -214,6 +217,30 @@ class World:
                 entity.mark_discovered()
 
         return discovered_entities
+
+    def _visible_entities_for(
+        self,
+        observer: Ant,
+        candidates: tuple[Entity, ...],
+    ) -> tuple[Entity, ...]:
+        return tuple(
+            candidate
+            for candidate in candidates
+            if not self._entity_is_occluded(observer, candidate)
+        )
+
+    def _entity_is_occluded(
+        self,
+        observer: Ant,
+        target: Entity,
+    ) -> bool:
+        if not isinstance(target, Food):
+            return False
+
+        return self._movement_intersects_obstacle(
+            (observer.x, observer.y),
+            (target.x, target.y),
+        )
 
     def update(self) -> None:
         if self._colony_complete:

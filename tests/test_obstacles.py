@@ -696,6 +696,100 @@ def test_maze_pheromone_arena_uses_rectilinear_maze_walls() -> None:
     assert not world._position_is_blocked(715, 430)
 
 
+
+def _target_distance_after_wall_probe(
+    *,
+    start: tuple[float, float],
+    mode: str,
+    ticks: int = 220,
+) -> tuple[float, float, float, float]:
+    world = World(rng=random.Random(11), scenario=MAZE_PHEROMONE_ARENA)
+    ant = world.ants[0]
+    food = world.food[0]
+    ant.x, ant.y = start
+    ant.speed = settings.ANT_MAX_SPEED
+    ant.heading = 0
+    ant.inventory.clear()
+    ant.state = AntState.WANDERING
+
+    if mode == "food":
+        ant.select_food_target(food)
+    elif mode == "nest":
+        ant.inventory.add(
+            ResourcePortion(
+                source_id=food.id,
+                resource_type=ResourceType.FOOD,
+                value=1,
+            )
+        )
+        ant.select_nest_target(world.nest)
+    else:
+        raise ValueError(f"Unsupported wall probe mode: {mode}")
+
+    assert not world._position_is_blocked(
+        ant.x,
+        ant.y,
+        radius=ant.hitbox_radius,
+    )
+
+    start_distance = world._target_distance_for(ant, (ant.x, ant.y))
+    start_x, start_y = ant.x, ant.y
+
+    for _ in range(ticks):
+        world._update_ant_movement(ant)
+        assert not world._position_is_blocked(
+            ant.x,
+            ant.y,
+            radius=ant.hitbox_radius,
+        )
+
+    end_distance = world._target_distance_for(ant, (ant.x, ant.y))
+    displacement = math.hypot(ant.x - start_x, ant.y - start_y)
+    return start_distance, end_distance, displacement, ant.x
+
+
+@pytest.mark.parametrize(
+    ("start", "mode"),
+    (
+        ((342, 170), "food"),
+        ((390, 208), "food"),
+        ((385, 516), "food"),
+        ((655, 458), "nest"),
+    ),
+)
+def test_maze_wall_edge_probes_make_target_progress(
+    start: tuple[float, float],
+    mode: str,
+) -> None:
+    start_distance, end_distance, displacement, _ = (
+        _target_distance_after_wall_probe(start=start, mode=mode)
+    )
+
+    assert displacement >= 60
+    assert end_distance <= start_distance - 35
+
+
+@pytest.mark.parametrize(
+    ("start", "mode"),
+    (
+        ((318, 468), "food"),
+        ((452, 516), "nest"),
+        ((672, 396), "nest"),
+        ((688, 10), "food"),
+    ),
+)
+def test_maze_wall_corner_probes_escape_and_improve_route(
+    start: tuple[float, float],
+    mode: str,
+) -> None:
+    start_distance, end_distance, displacement, _ = (
+        _target_distance_after_wall_probe(start=start, mode=mode)
+    )
+
+    assert displacement >= 70
+    assert end_distance <= start_distance - 40
+
+
 def test_maze_pheromone_arena_caps_total_ants_without_completion() -> None:
     world = World(scenario=MAZE_PHEROMONE_ARENA)
     world.nest.deposit(

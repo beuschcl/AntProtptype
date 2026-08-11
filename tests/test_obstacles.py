@@ -790,6 +790,18 @@ def test_maze_wall_corner_probes_escape_and_improve_route(
     assert end_distance <= start_distance - 40
 
 
+def test_maze_returning_ant_escapes_concave_corner_near_530_385() -> None:
+    start_distance, end_distance, displacement, _ = (
+        _target_distance_after_wall_probe(
+            start=(540, 394),
+            mode="nest",
+        )
+    )
+
+    assert displacement >= 70
+    assert end_distance <= start_distance - 40
+
+
 def test_maze_pheromone_arena_caps_total_ants_without_completion() -> None:
     world = World(scenario=MAZE_PHEROMONE_ARENA)
     world.nest.deposit(

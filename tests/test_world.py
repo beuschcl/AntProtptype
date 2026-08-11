@@ -13,7 +13,9 @@ from ant_colony.entities.food import Food
 from ant_colony.entities.nest import Nest
 from ant_colony.entities.pheromone import Pheromone, PheromoneType
 from ant_colony.entities.resource import Resource
+from ant_colony.geometry import RectangleObstacle
 from ant_colony.knowledge import EntityObservation
+from ant_colony.scenarios import Scenario
 from ant_colony.world import World
 
 
@@ -273,6 +275,68 @@ def test_world_rejects_sensing_for_unregistered_ant() -> None:
         match="not registered",
     ):
         world.sense_for(unknown_ant)
+
+
+def test_world_sensing_does_not_detect_food_through_wall() -> None:
+    scenario = Scenario(
+        name="wall_occluded_food",
+        nest_position=(100, 100),
+        initial_food_positions=((155, 100),),
+        obstacles=(
+            RectangleObstacle(
+                x=125,
+                y=60,
+                width=20,
+                height=80,
+            ),
+        ),
+    )
+    world = World(scenario=scenario)
+    ant = world.ants[0]
+    food = world.food[0]
+
+    discovered = world.sense_for(ant)
+
+    assert food not in discovered
+    assert not food.is_discovered
+    assert not ant.knowledge.knows(
+        f"entity:food:{food.id}"
+    )
+
+
+def test_world_prefers_visible_food_over_closer_wall_occluded_food() -> None:
+    scenario = Scenario(
+        name="visible_food_beats_occluded_food",
+        nest_position=(100, 100),
+        initial_food_positions=((155, 100),),
+        obstacles=(
+            RectangleObstacle(
+                x=125,
+                y=60,
+                width=20,
+                height=80,
+            ),
+        ),
+    )
+    world = World(scenario=scenario)
+    ant = world.ants[0]
+    hidden_food = world.food[0]
+    visible_food = Food(
+        food_id=9998,
+        x=100,
+        y=165,
+        nutrition=5,
+    )
+    world.add_entity(visible_food)
+
+    discovered = world.sense_for(ant)
+    world._assign_food_target(ant, discovered)
+
+    assert hidden_food not in discovered
+    assert visible_food in discovered
+    assert ant.food_target is visible_food
+    assert ant.food_target_source == FoodTargetSource.DISCOVERY
+
 
 def test_world_assigns_closest_discovered_food() -> None:
     world = World()

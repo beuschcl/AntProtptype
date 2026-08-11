@@ -22,6 +22,7 @@ dev = [
 ant-colony = "ant_colony.main:main"
 ant-colony-obstacle-test = "ant_colony.obstacle_test:main_obstacle_test"
 ant-colony-route-reassessment-test = "ant_colony.route_reassessment_test:main_route_reassessment_test"
+ant-colony-maze-pheromone-test = "ant_colony.maze_pheromone_test:main_maze_pheromone_test"
 
 [tool.setuptools.packages.find]
 include = ["ant_colony*"]

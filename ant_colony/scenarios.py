@@ -17,6 +17,7 @@ class Scenario:
     route_blockers: tuple[RectangleObstacle, ...] = ()
     route_blocker_activation_tick: int | None = None
     route_blocker_activation_trip_count: int | None = None
+    max_ants: int | None = None
 
 
 DEFAULT_SCENARIO = Scenario(
@@ -82,11 +83,28 @@ ROUTE_REASSESSMENT_ARENA = Scenario(
     ),
 )
 
+MAZE_PHEROMONE_ARENA = Scenario(
+    name=settings.MAZE_PHEROMONE_ARENA_NAME,
+    nest_position=settings.MAZE_PHEROMONE_ARENA_NEST_POSITION,
+    initial_food_positions=settings.MAZE_PHEROMONE_ARENA_INITIAL_FOOD_POSITIONS,
+    obstacles=tuple(
+        RectangleObstacle(
+            x=x,
+            y=y,
+            width=width,
+            height=height,
+        )
+        for x, y, width, height in settings.MAZE_PHEROMONE_ARENA_OBSTACLES
+    ),
+    max_ants=settings.MAZE_PHEROMONE_ARENA_MAX_ANTS,
+)
+
 
 _SCENARIOS = {
     DEFAULT_SCENARIO.name: DEFAULT_SCENARIO,
     NAVIGATION_TEST_ARENA.name: NAVIGATION_TEST_ARENA,
     ROUTE_REASSESSMENT_ARENA.name: ROUTE_REASSESSMENT_ARENA,
+    MAZE_PHEROMONE_ARENA.name: MAZE_PHEROMONE_ARENA,
 }
 
 
